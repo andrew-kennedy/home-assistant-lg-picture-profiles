@@ -1,0 +1,47 @@
+{
+  "title": "LG Picture Profiles",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to LG Picture Bridge",
+        "description": "Requires LG Picture Bridge 0.11.0 or newer. For a command topic ending in /command, enter the preceding base topic. Setup works while the TV is off. Management starts disabled until standards are imported.",
+        "data": {
+          "name": "Name",
+          "bridge_topic": "Bridge MQTT base topic",
+          "tv_entity": "LG TV media player",
+          "sun_entity": "Sun entity",
+          "bright_helper": "Daytime SDR movie brightness helper (optional)",
+          "dark_helper": "Nighttime SDR movie brightness helper (optional)",
+          "game_helper": "SDR game brightness helper (optional)"
+        }
+      }
+    },
+    "error": {
+      "invalid_topic": "Use the bridge base topic without wildcard characters or a command suffix.",
+      "bridge_change": "Add a separate integration entry to manage a different bridge."
+    },
+    "abort": {
+      "already_configured": "This TV bridge is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Profile settings",
+        "data": {
+          "name": "Name",
+          "bridge_topic": "Bridge MQTT base topic",
+          "tv_entity": "LG TV media player",
+          "sun_entity": "Sun entity",
+          "bright_helper": "Daytime SDR movie brightness helper (optional)",
+          "dark_helper": "Nighttime SDR movie brightness helper (optional)",
+          "game_helper": "SDR game brightness helper (optional)"
+        }
+      }
+    },
+    "error": {
+      "invalid_topic": "Use the bridge base topic without wildcard characters or a command suffix.",
+      "bridge_change": "Add a separate integration entry to manage a different bridge."
+    }
+  }
+}

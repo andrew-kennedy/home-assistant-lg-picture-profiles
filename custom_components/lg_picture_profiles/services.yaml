@@ -1,0 +1,71 @@
+import_profiles:
+  name: Import standard profiles
+  description: Validate and save a profile collection. Does not capture observed values or enable management. Existing temporary adjustments must be restored or saved first.
+  fields:
+    entry_id:
+      name: Integration entry ID
+      description: Optional when only one TV is configured.
+      selector:
+        text:
+    document:
+      name: Profile document
+      description: Supply a structured document or YAML text, not both.
+      selector:
+        object:
+    yaml:
+      name: YAML document
+      selector:
+        text:
+          multiline: true
+export_profiles:
+  name: Export standard profiles
+  description: Return JSON and readable YAML for backup or Git. Temporary adjustments are excluded.
+  fields:
+    entry_id:
+      name: Integration entry ID
+      selector:
+        text:
+restore_standard:
+  name: Restore standard
+  description: Restore saved values for the selected scope using the current day/night settings. An all-bank restore is queued if the TV is off.
+  fields:
+    entry_id:
+      name: Integration entry ID
+      selector:
+        text:
+    scope:
+      name: Scope
+      default: all
+      selector:
+        select:
+          options: [all, active]
+save_standard:
+  name: Save adjustments as standard
+  description: Read back tracked temporary adjustments and explicitly promote them to the standard. The current room variant and any assigned brightness helper are updated.
+  fields:
+    entry_id:
+      name: Integration entry ID
+      selector:
+        text:
+    scope:
+      name: Scope
+      default: active
+      selector:
+        select:
+          options: [active, all]
+reconcile:
+  name: Update picture environment
+  description: Apply pending session restores and changed day/night values. Already confirmed environments send no commands.
+  fields:
+    entry_id:
+      name: Integration entry ID
+      selector:
+        text:
+preview:
+  name: Preview differences
+  description: Read saved TV settings and report differences from the standards without changing the TV.
+  fields:
+    entry_id:
+      name: Integration entry ID
+      selector:
+        text:

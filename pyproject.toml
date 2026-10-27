@@ -1,0 +1,17 @@
+[project]
+name = "home-assistant-lg-picture-profiles"
+version = "0.1.0"
+description = "Saved picture standards and temporary overrides for LG Picture Bridge"
+requires-python = ">=3.14"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"]
