@@ -354,7 +354,7 @@ class ProfileManager:
     async def async_rpc(self, action, **fields):
         if not self.available:
             raise HomeAssistantError(
-                "Turn on the TV with LG Picture Bridge 0.13.0 or newer to change its profiles"
+                "Turn on the TV with LG Picture Bridge 0.13.2 or newer to change its profiles"
             )
         async with self._control_lock:
             return await self.transport.async_command(action, **fields)

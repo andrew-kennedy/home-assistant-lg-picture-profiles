@@ -200,3 +200,13 @@ async def test_invalid_old_store_not_replaced(manager):
         await runtime.async_start()
     await runtime.async_stop()
     assert store.saved == original
+
+
+async def test_status_sensor_explains_native_tv_error(manager):
+    from custom_components.lg_picture_profiles.sensor import ProfileSensor
+
+    manager.transport.manager_status["error"] = "Inactive preset rejected"
+    entry = SimpleNamespace(entry_id="test", title="Profiles", runtime_data=manager)
+    sensor = ProfileSensor(entry, "status")
+    assert sensor.native_value == "error"
+    assert sensor.extra_state_attributes["last_error"] == "Inactive preset rejected"

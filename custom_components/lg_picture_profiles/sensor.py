@@ -31,5 +31,6 @@ class ProfileSensor(ProfileEntity, SensorEntity):
             "active_devices": self.manager.active_names,
             "pending_restore": self.manager.data["pending_restore"],
             "last_changed_settings": self.manager.last_changed_count,
-            "last_error": self.manager.last_error,
+            "last_error": self.manager.last_error
+            or self.manager.transport.manager_status.get("error"),
         }
