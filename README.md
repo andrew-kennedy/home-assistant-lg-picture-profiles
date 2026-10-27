@@ -5,10 +5,12 @@ Home Assistant controls and complete backups for the **TV-owned** profile manage
 ## Install or upgrade
 
 1. Add `andrew-kennedy/home-assistant-lg-picture-profiles` in HACS as an Integration, download, then restart Home Assistant.
-2. Add **LG Picture Profiles** in Devices & services. The complete UI flow asks for the existing bridge MQTT base topic, TV entity and sun entity. Optional existing brightness helpers can remain as synchronized controls; new installations can use the integration's three number entities.
+2. Add **LG Picture Profiles** in Devices & services. The complete UI flow asks for the existing bridge MQTT base topic, TV entity and sun entity. The integration creates its own three SDR brightness sliders; no input_number helpers are required.
 3. Open **LG Picture Profiles** in the sidebar (admin access), or **Picture profiles** in the TV app. Both use the same editor. Import a verified schema 1 standard document or complete JSON backup while the TV is on.
 
-Upgrading from 0.1/0.2 preserves the entire previous HA Store as a rollback copy and migrates its exact standards, helper values, temporary changes and queued restores to an unconfigured TV. The former HA policy loop stops immediately. Migration finishes only after a matching complete TV backup is committed to HA storage. Until bridge 0.13 is online, status is `awaiting_tv_migration`. A TV that already owns a collection is never overwritten automatically.
+Upgrading from 0.3 removes the retired helper bindings from both setup data and options. Existing TV standards, brightness preferences, temporary adjustments and complete backups remain unchanged. Move any dashboards or automations from the old helpers to the integration’s number entities, then delete helpers you no longer need; the integration does not delete unrelated user-owned entities.
+
+If upgrading an older helper-based 0.1/0.2 setup, first install 0.3.2 and turn on the updated bridge to complete TV ownership migration. That version preserves the former HA Store and transfers helper values to the TV. The 0.4 upgrade checks the saved complete backup before discarding active helper bindings, preventing an unfinished migration from losing those values. A TV that already owns a collection is never overwritten automatically.
 
 ## Daily use
 
@@ -17,7 +19,7 @@ Upgrading from 0.1/0.2 preserves the entire previous HA Store as a rollback copy
 - Standards live on the TV. Only explicit save/import/editor actions change them. A confirmed TV power cycle restores temporary changes; a bridge restart, HA restart, unknown/unavailable state, or format transition does not end a session.
 - Native input/range/ALLM mappings select movie and game presets. No source-based picture reapplication is added. Apple TV and Shield share a standard where they share an LG bank; the editor labels this.
 - The **Manage picture profiles**, **Restore standard**, **Save current adjustments as standard**, **Profile status** and **Temporary adjustments** entity IDs are preserved. Three new brightness numbers edit shared bright/dark movie SDR and game SDR standards, with bounds 0–100.
-- Optional configured input_number helpers mirror these TV-owned brightness values. Changing a helper forwards an explicit edit to the TV; changing a standard in the editor updates its helper. Clearing a helper in Configure stops that link and does not reset the TV preference.
+- The three integration brightness sliders edit saved standards, while the raw MQTT picture controls make temporary adjustments. Retired input_number helpers are no longer read, synchronized or offered in setup/options.
 - HA sends sunrise/sunset room context through retained MQTT state. The TV applies only changed environment settings and respects temporary adjustments. During an HA outage, the last known room remains until reconnection.
 
 Only keys defined in the collection are managed. Custom Game Optimizer genres need their own native-bank definitions. Unrelated accessibility, audio, panel calibration and energy settings are not added or learned. A remote-selected picture mode outside the curated collection can be tracked for restoration, but cannot be promoted as a supported standard.
@@ -45,7 +47,7 @@ The backup is complete for **managed picture profiles**, not a firmware or whole
 - `reconcile`: ask the TV to retry pending recovery/environment work.
 - `preview`: show the TV's collection/status, or the saved backup while offline.
 
-Use the integration's **Configure** screen to rename it, change the sun/TV entities or link/unlink optional brightness helpers. The MQTT base is fixed per entry; add another entry for another TV. Never edit live `.storage` manually. Retired recipe/environment automations must remain removed so they do not compete with TV ownership; the bridge rejects legacy profile writes after initialization. HDMI icon commands and source/CEC/power automations continue independently.
+Use the integration's **Configure** screen to rename it or change the sun/TV entities. The MQTT base is fixed per entry; add another entry for another TV. Never edit live `.storage` manually. Retired recipe/environment automations must remain removed so they do not compete with TV ownership; the bridge rejects legacy profile writes after initialization. HDMI icon commands and source/CEC/power automations continue independently.
 
 ## Standard document
 
@@ -83,7 +85,7 @@ banks:
 
 This illustrates the schema, not a complete calibration. Each native target appears once. Devices sharing a bank reference it; independent settings for Apple TV and Shield on the same LG bank would require source-based reapplication. PC picture inputs retain `_pc`; game controls use physical `gameInput` plus `dynamicRange` and `gameGenre`. Motion controls use a separate bank with `app_id: com.webos.app.hdmiN`. Mode mappings use `{input, dynamicRange}` and the `pictureMode` setting.
 
-`brightness_role` is `movie_sdr` or `game_sdr`. Its effective brightness comes from the TV's shared preferences (bright/dark movie or game), independently of whether an HA helper is linked. Quote YAML strings such as `"off"` and `"on"`. Panel-specific white balance/CMS calibration is never copied automatically.
+`brightness_role` is `movie_sdr` or `game_sdr`. Its effective brightness comes from the TV's shared preferences (bright/dark movie or game), exposed by the integration’s own number entities. Quote YAML strings such as `"off"` and `"on"`. Panel-specific white balance/CMS calibration is never copied automatically.
 
 ## Development
 

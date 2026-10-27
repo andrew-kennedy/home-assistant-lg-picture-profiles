@@ -210,3 +210,50 @@ async def test_status_sensor_explains_native_tv_error(manager):
     sensor = ProfileSensor(entry, "status")
     assert sensor.native_value == "error"
     assert sensor.extra_state_attributes["last_error"] == "Inactive preset rejected"
+
+
+@pytest.mark.parametrize("role", ["movie_bright", "movie_dark", "game_sdr"])
+async def test_brightness_slider_reads_confirmed_tv_value_and_never_mirrors_helpers(manager, role):
+    from custom_components.lg_picture_profiles.number import ProfileBrightness
+
+    helper_call = AsyncMock()
+    manager.hass.services.async_register("input_number", "set_value", helper_call)
+    manager.config.update(
+        bright_helper="input_number.day",
+        dark_helper="input_number.night",
+        game_helper="input_number.game",
+    )
+    for helper in ("day", "night", "game"):
+        manager.hass.states.async_set("input_number." + helper, "0")
+    await manager._accept_backup(backup())
+    entry = SimpleNamespace(entry_id="test", title="Profiles", runtime_data=manager)
+    slider = ProfileBrightness(entry, role)
+    before = manager.snapshot["preferences"][role]
+    assert slider.native_value == before
+    await slider.async_set_native_value(42)
+    assert manager.transport.calls == [("set_brightness", {"values": {role: 42}, "revision": 1})]
+    assert slider.native_value == before, "Display only the TV-confirmed value"
+    await manager._accept_backup(
+        backup(sequence=2, revision=2, preferences={**manager.snapshot["preferences"], role: 42})
+    )
+    assert slider.native_value == 42
+    await manager.hass.async_block_till_done()
+    helper_call.assert_not_called()
+
+
+async def test_retired_helper_changes_do_not_send_tv_commands(manager):
+    await manager._accept_backup(backup())
+    manager.config["dark_helper"] = "input_number.lg_movie_dark_sdr_oled_light"
+    for value in (4, 5):
+        manager._state_changed(
+            SimpleNamespace(
+                data={
+                    "old_state": SimpleNamespace(state=str(value - 1)),
+                    "new_state": SimpleNamespace(
+                        state=str(value), entity_id="input_number.lg_movie_dark_sdr_oled_light"
+                    ),
+                }
+            )
+        )
+    await manager.hass.async_block_till_done()
+    assert not manager.transport.calls

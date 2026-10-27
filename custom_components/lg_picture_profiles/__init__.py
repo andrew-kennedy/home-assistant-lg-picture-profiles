@@ -2,20 +2,56 @@
 
 from __future__ import annotations
 
+import logging
+
 import voluptuous as vol
 import yaml
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.storage import Store
 
 from . import panel
-from .const import DOMAIN, PLATFORMS
+from .backup import decode
+from .const import DOMAIN, PLATFORMS, STORAGE_VERSION
 from .manager import ProfileManager
 from .model import ProfileError
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 type LGProfilesEntry = ConfigEntry[ProfileManager]
+_LOGGER = logging.getLogger(__name__)
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: LGProfilesEntry) -> bool:
+    """Retire helper bindings after their values have reached TV-owned storage."""
+    if entry.version > 2:
+        return False
+    if entry.version == 1:
+        retired = {"bright_helper", "dark_helper", "game_helper"}
+        current = entry.options or entry.data
+        if any(current.get(key) for key in retired):
+            stored = await Store(
+                hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}", atomic_writes=True
+            ).async_load()
+            try:
+                if not stored or not stored.get("migration_complete"):
+                    raise ValueError("TV ownership migration is incomplete")
+                decode(stored.get("backup"))
+            except ValueError, TypeError, KeyError:
+                _LOGGER.error(
+                    "Complete TV profile migration using LG Picture Profiles 0.3.2 "
+                    "before upgrading; existing helper values have not been backed up"
+                )
+                return False
+        hass.config_entries.async_update_entry(
+            entry,
+            data={k: v for k, v in entry.data.items() if k not in retired},
+            options={k: v for k, v in entry.options.items() if k not in retired},
+            version=2,
+            minor_version=1,
+        )
+    return True
 
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:

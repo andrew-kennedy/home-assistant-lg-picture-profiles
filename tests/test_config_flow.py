@@ -1,25 +1,30 @@
+from copy import deepcopy
 from types import MappingProxyType
 from unittest.mock import AsyncMock
 
 import pytest
+import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 
-from custom_components.lg_picture_profiles.config_flow import LGPictureProfilesConfigFlow
+from custom_components.lg_picture_profiles import async_migrate_entry
+from custom_components.lg_picture_profiles.config_flow import LGPictureProfilesConfigFlow, schema
 from custom_components.lg_picture_profiles.manager import ProfileManager
 
 from .conftest import FakeTransport, MemoryStore, document
+from .test_manager import backup
 
-HELPERS = ("bright_helper", "dark_helper", "game_helper")
+HELPERS = {
+    "bright_helper": "input_number.day",
+    "dark_helper": "input_number.night",
+    "game_helper": "input_number.game",
+}
 SETUP = {
     "name": "LG Picture Profiles",
     "bridge_topic": "lg/test",
     "tv_entity": "media_player.tv",
     "sun_entity": "sun.sun",
-    "bright_helper": "input_number.day",
-    "dark_helper": "input_number.night",
-    "game_helper": "input_number.game",
 }
 
 
@@ -40,17 +45,17 @@ async def configured(tmp_path, monkeypatch):
         discovery_keys=MappingProxyType({}),
         subentries_data=None,
     )
-    # Use HA's actual flow validation/persistence; substitute only integration discovery.
     hass.config_entries._entries[entry.entry_id] = entry
     monkeypatch.setattr(
         config_entries,
         "_async_get_flow_handler",
         AsyncMock(return_value=LGPictureProfilesConfigFlow),
     )
+    monkeypatch.setattr(
+        config_entries, "_support_single_config_entry_only", AsyncMock(return_value=False)
+    )
     hass.states.async_set("media_player.tv", "on")
     hass.states.async_set("sun.sun", "below_horizon")
-    for entity in ("input_number.day", "input_number.night", "input_number.game"):
-        hass.states.async_set(entity, "25")
     yield hass, entry
     await hass.async_stop()
 
@@ -59,64 +64,95 @@ def field(form, name):
     return next(k for k in form["data_schema"].schema if k.schema == name)
 
 
-@pytest.mark.parametrize("helper", HELPERS)
-async def test_clear_helper_through_real_options_flow(configured, helper):
+async def test_setup_and_options_only_offer_connection_fields(configured, monkeypatch):
     hass, entry = configured
-    form = await hass.config_entries.options.async_init(entry.entry_id)
-    assert field(form, helper).description["suggested_value"] == SETUP[helper]
-    edited = {k: v for k, v in SETUP.items() if k != helper}
-    result = await hass.config_entries.options.async_configure(form["flow_id"], edited)
+    form = await hass.config_entries.flow.async_init(
+        "lg_picture_profiles", context={"source": "user"}
+    )
+    assert {k.schema for k in form["data_schema"].schema} == set(SETUP)
+    monkeypatch.setattr(hass.config_entries, "async_setup", AsyncMock(return_value=True))
+    edited = {**SETUP, "bridge_topic": "lg/another"}
+    result = await hass.config_entries.flow.async_configure(form["flow_id"], edited)
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert dict(entry.options) == edited
-    assert entry.data[helper] == SETUP[helper]  # Original setup data must not resurrect it.
-    reopened = await hass.config_entries.options.async_init(entry.entry_id)
-    assert not (field(reopened, helper).description or {}).get("suggested_value")
-    for remaining in set(HELPERS) - {helper}:
-        assert field(reopened, remaining).description["suggested_value"] == SETUP[remaining]
-    runtime = ProfileManager(hass, entry, transport=FakeTransport(document()), store=MemoryStore())
-    assert runtime.config == edited
+    assert result["result"].version == 2
+    assert dict(result["result"].data) == edited
+    form = await hass.config_entries.options.async_init(entry.entry_id)
+    assert {k.schema for k in form["data_schema"].schema} == set(SETUP)
+    with pytest.raises(vol.Invalid):
+        schema()({**SETUP, **HELPERS})
 
 
-async def test_saved_options_remain_authoritative_after_runtime_reload(configured):
+@pytest.mark.parametrize("with_options", [False, True])
+async def test_migration_removes_bindings_without_changing_tv_backup(
+    configured, monkeypatch, with_options
+):
     hass, entry = configured
-    edited = {k: v for k, v in SETUP.items() if k not in HELPERS}
-    hass.config_entries.async_update_entry(entry, options=edited)
-    baseline = document()
-    saved = {"document": baseline, "enabled": True, "overrides": {"game_hdr": {"gameSharpness": 7}}}
-    store = MemoryStore(saved)
-    for _ in range(2):
-        runtime = ProfileManager(hass, entry, transport=FakeTransport(baseline), store=store)
-        runtime._schedule_sync = lambda: None
-        await runtime.async_start()
-        assert runtime.config == edited
-        assert all(key not in runtime.config for key in HELPERS)
-        assert runtime.document == baseline
-        assert runtime.saved["legacy"]["overrides"] == saved["overrides"]
-        await runtime.async_stop()
+    options = {**SETUP, **HELPERS, "sun_entity": "sun.alternate"} if with_options else {}
+    hass.config_entries.async_update_entry(entry, data={**SETUP, **HELPERS}, options=options)
+    stored = {
+        "format": 2,
+        "migration_complete": True,
+        "backup": backup(preferences={"movie_bright": 73, "movie_dark": 7, "game_sdr": 62}),
+        "previous": [],
+        "legacy": {"document": document()},
+    }
+    original = deepcopy(stored)
+    store = MemoryStore(stored)
+    monkeypatch.setattr("custom_components.lg_picture_profiles.Store", lambda *a, **kw: store)
+    assert await async_migrate_entry(hass, entry)
+    assert entry.version == 2
+    assert dict(entry.data) == SETUP
+    expected = {k: v for k, v in options.items() if k not in HELPERS}
+    assert dict(entry.options) == expected
+    assert store.saved == original
+    assert store.saves == 0
+    runtime = ProfileManager(hass, entry, transport=FakeTransport(), store=store)
+    runtime._schedule_sync = lambda: None
+    await runtime.async_start()
+    assert runtime.config == (expected or SETUP)
+    assert runtime.snapshot["preferences"] == {"movie_bright": 73, "movie_dark": 7, "game_sdr": 62}
+    await runtime.async_stop()
+    assert await async_migrate_entry(hass, entry), "Migration is idempotent"
 
 
-async def test_initial_entries_without_options_keep_their_configured_helpers(configured):
+@pytest.mark.parametrize(
+    "stored",
+    [
+        None,
+        {"document": document()},
+        {"migration_complete": True, "backup": {"state_json": "corrupt"}},
+    ],
+)
+async def test_unfinished_legacy_migration_keeps_helper_bindings(configured, monkeypatch, stored):
     hass, entry = configured
-    runtime = ProfileManager(hass, entry, transport=FakeTransport(document()), store=MemoryStore())
-    assert runtime.config == SETUP
-    assert all(runtime.config[key] == SETUP[key] for key in HELPERS)
+    original = {**SETUP, **HELPERS}
+    hass.config_entries.async_update_entry(entry, data=original)
+    store = MemoryStore(stored)
+    monkeypatch.setattr("custom_components.lg_picture_profiles.Store", lambda *a, **kw: store)
+    assert not await async_migrate_entry(hass, entry)
+    assert entry.version == 1
+    assert dict(entry.data) == original
+    assert not store.saves
 
 
-async def test_changed_bridge_rejected_without_restoring_cleared_helpers(configured):
+async def test_cleared_bindings_are_not_resurrected_from_original_setup(configured):
+    hass, entry = configured
+    hass.config_entries.async_update_entry(entry, data={**SETUP, **HELPERS}, options=SETUP)
+    assert await async_migrate_entry(hass, entry)
+    assert dict(entry.data) == dict(entry.options) == SETUP
+
+
+async def test_changed_bridge_rejected_without_saving(configured):
     hass, entry = configured
     form = await hass.config_entries.options.async_init(entry.entry_id)
-    edited = {k: v for k, v in SETUP.items() if k != "dark_helper"}
-    edited["bridge_topic"] = "another/bridge"
+    edited = {**SETUP, "bridge_topic": "another/bridge"}
     error = await hass.config_entries.options.async_configure(form["flow_id"], edited)
     assert error["errors"] == {"bridge_topic": "bridge_change"}
     assert not entry.options
-    assert not (field(error, "dark_helper").description or {}).get("suggested_value")
-    edited["bridge_topic"] = SETUP["bridge_topic"]
-    await hass.config_entries.options.async_configure(form["flow_id"], edited)
-    assert dict(entry.options) == edited
+    assert {k.schema for k in error["data_schema"].schema} == set(SETUP)
 
 
-async def test_name_and_helper_change_are_saved_together(configured):
+async def test_name_and_environment_change_are_saved_together(configured):
     hass, entry = configured
     changes = []
 
@@ -125,7 +161,7 @@ async def test_name_and_helper_change_are_saved_together(configured):
 
     entry.add_update_listener(updated)
     form = await hass.config_entries.options.async_init(entry.entry_id)
-    edited = {**SETUP, "name": "Living room profiles", "dark_helper": "input_number.new_night"}
+    edited = {**SETUP, "name": "Living room profiles", "sun_entity": "sun.alternate"}
     await hass.config_entries.options.async_configure(form["flow_id"], edited)
     await hass.async_block_till_done()
     assert entry.title == edited["name"]

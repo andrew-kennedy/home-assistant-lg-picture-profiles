@@ -4,15 +4,12 @@
     "step": {
       "user": {
         "title": "Connect to LG Picture Bridge",
-        "description": "Requires LG Picture Bridge 0.13.2 or newer. Enter the MQTT base before /command. The TV owns profiles; Home Assistant provides controls, day/night context and complete backups. Setup works while the TV is off.",
+        "description": "Requires LG Picture Bridge 0.13.2 or newer. Enter the MQTT base before /command. The TV owns profiles; Home Assistant provides brightness sliders, day/night context and complete backups. Setup works while the TV is off.",
         "data": {
           "name": "Name",
           "bridge_topic": "Bridge MQTT base topic",
           "tv_entity": "LG TV media player",
-          "sun_entity": "Sun entity",
-          "bright_helper": "Daytime SDR movie brightness helper (optional)",
-          "dark_helper": "Nighttime SDR movie brightness helper (optional)",
-          "game_helper": "SDR game brightness helper (optional)"
+          "sun_entity": "Sun entity"
         }
       }
     },
@@ -32,11 +29,9 @@
           "name": "Name",
           "bridge_topic": "Bridge MQTT base topic",
           "tv_entity": "LG TV media player",
-          "sun_entity": "Sun entity",
-          "bright_helper": "Daytime SDR movie brightness helper (optional)",
-          "dark_helper": "Nighttime SDR movie brightness helper (optional)",
-          "game_helper": "SDR game brightness helper (optional)"
-        }
+          "sun_entity": "Sun entity"
+        },
+        "description": "Edit saved brightness with this integration’s three SDR brightness sliders. No separate helpers are needed."
       }
     },
     "error": {

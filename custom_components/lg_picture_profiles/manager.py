@@ -12,10 +12,8 @@ from homeassistant.helpers.storage import Store
 
 from .backup import decode
 from .const import (
+    BRIGHTNESS_ROLES,
     CONF_BRIDGE_TOPIC,
-    CONF_BRIGHT_HELPER,
-    CONF_DARK_HELPER,
-    CONF_GAME_HELPER,
     CONF_SUN_ENTITY,
     CONF_TV_ENTITY,
     DOMAIN,
@@ -23,12 +21,6 @@ from .const import (
 )
 from .model import validate
 from .transport import BridgeTransport
-
-HELPERS = {
-    "movie_bright": CONF_BRIGHT_HELPER,
-    "movie_dark": CONF_DARK_HELPER,
-    "game_sdr": CONF_GAME_HELPER,
-}
 
 
 class ProfileManager:
@@ -58,7 +50,6 @@ class ProfileManager:
         self._connection = None
         self._sync_task = None
         self._sync_again = False
-        self._mirroring = {}
         self.transport = transport or BridgeTransport(
             hass,
             self.config[CONF_BRIDGE_TOPIC],
@@ -174,7 +165,6 @@ class ProfileManager:
                 await self.store.async_save(deepcopy(self.saved))
         self._loaded = True
         ids = [self.config.get(CONF_SUN_ENTITY, "sun.sun"), self.config[CONF_TV_ENTITY]]
-        ids += [self.config[k] for k in HELPERS.values() if self.config.get(k)]
         self._unsub = async_track_state_change_event(self.hass, ids, self._state_changed)
         await self.transport.async_start()
         self._schedule_sync()
@@ -229,15 +219,6 @@ class ProfileManager:
                         )
                 else:
                     prefs = {"movie_bright": 100, "movie_dark": 3, "game_sdr": 80}
-                    for role, key in HELPERS.items():
-                        entity = self.hass.states.get(self.config.get(key, ""))
-                        if entity:
-                            try:
-                                value = float(entity.state)
-                                if value.is_integer() and 0 <= value <= 100:
-                                    prefs[role] = int(value)
-                            except ValueError:
-                                pass
                     await self.transport.async_command(
                         "initialize",
                         document=legacy["document"],
@@ -262,25 +243,7 @@ class ProfileManager:
             return
         if new.entity_id == self.config.get(CONF_SUN_ENTITY, "sun.sun"):
             self._schedule_sync()
-        for role, key in HELPERS.items():
-            if new.entity_id != self.config.get(key):
-                continue
-            try:
-                value = float(new.state)
-            except ValueError:
-                return
-            if self._mirroring.pop(new.entity_id, None) == value:
-                return
-            if self.available and self.saved["migration_complete"]:
-                self._spawn(self._helper_changed(role, value))
         # TV power never runs HA-side picture writes. The TV owns restoration.
-
-    async def _helper_changed(self, role, value):
-        try:
-            await self.async_set_brightness(role, value)
-        except HomeAssistantError as error:
-            self.last_error = str(error)
-            self.notify()
 
     @callback
     def _receive_backup(self, envelope):
@@ -329,27 +292,7 @@ class ProfileManager:
             await self.transport.async_ack_backup(state, envelope["sha256"])
             if self._candidate is envelope:
                 self._candidate = None
-            await self._mirror_helpers(state["preferences"])
             self.notify()
-
-    async def _mirror_helpers(self, prefs):
-        for role, key in HELPERS.items():
-            entity = self.config.get(key)
-            state = self.hass.states.get(entity) if entity else None
-            if not state or not self.hass.services.has_service("input_number", "set_value"):
-                continue
-            try:
-                if float(state.state) == prefs[role]:
-                    continue
-            except ValueError:
-                continue
-            self._mirroring[entity] = prefs[role]
-            await self.hass.services.async_call(
-                "input_number",
-                "set_value",
-                {"entity_id": entity, "value": prefs[role]},
-                blocking=False,
-            )
 
     async def async_rpc(self, action, **fields):
         if not self.available:
@@ -395,7 +338,7 @@ class ProfileManager:
         return await self.async_rpc("set_enabled", enabled=enabled)
 
     async def async_set_brightness(self, role, value):
-        if role not in HELPERS or not float(value).is_integer() or not 0 <= value <= 100:
+        if role not in BRIGHTNESS_ROLES or not float(value).is_integer() or not 0 <= value <= 100:
             raise HomeAssistantError("SDR brightness must be an integer from 0 to 100")
         return await self.async_rpc(
             "set_brightness", values={role: int(value)}, revision=self.revision

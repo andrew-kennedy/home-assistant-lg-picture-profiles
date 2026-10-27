@@ -1,4 +1,4 @@
-"""Configure the existing MQTT bridge and optional brightness helpers."""
+"""Configure the existing MQTT bridge and its environment source."""
 
 from __future__ import annotations
 
@@ -11,9 +11,6 @@ from homeassistant.helpers import selector
 
 from .const import (
     CONF_BRIDGE_TOPIC,
-    CONF_BRIGHT_HELPER,
-    CONF_DARK_HELPER,
-    CONF_GAME_HELPER,
     CONF_SUN_ENTITY,
     CONF_TV_ENTITY,
     DOMAIN,
@@ -33,13 +30,6 @@ def schema(defaults=None):
             CONF_SUN_ENTITY, default=values.get(CONF_SUN_ENTITY, "sun.sun")
         ): selector.EntitySelector(selector.EntitySelectorConfig(domain="sun")),
     }
-    for key in (CONF_BRIGHT_HELPER, CONF_DARK_HELPER, CONF_GAME_HELPER):
-        # Suggestions prefill the UI without reinserting a helper the user cleared.
-        fields[
-            vol.Optional(
-                key, description={"suggested_value": values[key]} if values.get(key) else None
-            )
-        ] = selector.EntitySelector(selector.EntitySelectorConfig(domain="input_number"))
     return vol.Schema(fields)
 
 
@@ -52,7 +42,7 @@ def valid_topic(value):
 
 
 class LGPictureProfilesConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    VERSION = 1
+    VERSION = 2
 
     async def async_step_user(self, user_input=None):
         errors = {}
