@@ -1,5 +1,6 @@
 from copy import deepcopy
 from datetime import UTC, datetime
+from types import SimpleNamespace
 
 import pytest
 from homeassistant.exceptions import HomeAssistantError
@@ -109,3 +110,34 @@ async def test_new_edit_during_explicit_restore_remains_temporary(manager):
     assert not manager.data["pending_restore"]
     await manager.async_reconcile()
     assert manager.transport.values["game_hdr"]["gameSharpness"] == 9
+
+
+async def test_tv_metadata_and_sun_attributes_do_not_write_or_schedule_work(manager):
+    scheduled = []
+    manager._schedule_sync = lambda: scheduled.append(True)
+    saves = manager.store.saves
+    for entity in ("media_player.tv", "sun.sun"):
+        state = manager.hass.states.get(entity)
+        for _ in range(10):
+            await manager._handle_state(
+                SimpleNamespace(
+                    data={
+                        "old_state": state,
+                        "new_state": state,
+                    }
+                )
+            )
+    assert manager.store.saves == saves
+    assert not scheduled
+    old = manager.hass.states.get("media_player.tv")
+    manager.hass.states.async_set("media_player.tv", "off")
+    await manager._handle_state(
+        SimpleNamespace(
+            data={
+                "old_state": old,
+                "new_state": manager.hass.states.get("media_player.tv"),
+            }
+        )
+    )
+    assert manager.store.saves == saves + 1
+    assert len(scheduled) == 1

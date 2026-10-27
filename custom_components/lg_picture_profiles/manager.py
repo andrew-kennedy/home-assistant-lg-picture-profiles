@@ -196,10 +196,16 @@ class ProfileManager:
 
     async def _handle_state(self, event) -> None:
         state = event.data.get("new_state")
+        old = event.data.get("old_state")
+        # Volume, media metadata and sun ephemeris updates do not change policy.
+        # In particular, never resave durable state for attribute-only TV events.
+        if old and state and old.state == state.state:
+            return
         if (
             state
             and state.entity_id == self.config[CONF_TV_ENTITY]
             and state.state in ("on", "off")
+            and state.state != self.data["last_power"]
         ):
             async with self._lock:
                 if state.state == "off" and self.override_count:
