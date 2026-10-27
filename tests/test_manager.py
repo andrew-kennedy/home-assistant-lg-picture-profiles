@@ -144,7 +144,7 @@ async def test_old_bridge_cannot_trigger_legacy_policy(manager):
     await manager._sync()
     assert manager.state == "awaiting_tv_migration"
     assert not manager.transport.calls
-    with pytest.raises(HomeAssistantError, match="0.13.0"):
+    with pytest.raises(HomeAssistantError, match=r"LG Picture Bridge 0\.13\.2"):
         await manager.async_restore()
 
 
