@@ -2,7 +2,7 @@
 
 A Home Assistant companion for [LG Picture Bridge](https://github.com/andrew-kennedy/lg-webos-picture-bridge). Keep verified picture standards, make temporary adjustments through the existing MQTT entities, and restore the correct saved preset even after the input or HDR format changes.
 
-Requires Home Assistant 2026.10 or newer, HACS, an existing MQTT integration, and LG Picture Bridge **0.11.0 or newer** on a supported rooted LG G6. The companion does not root a TV or update firmware. It reuses Home Assistant's MQTT connection; it needs no SSH key, broker password, or TV administrator credential.
+Requires Home Assistant 2026.10 or newer, HACS, an existing MQTT integration, and LG Picture Bridge **0.12.0 or newer** on a supported rooted LG G6. The companion does not root a TV or update firmware. It reuses Home Assistant's MQTT connection; it needs no SSH key, broker password, or TV administrator credential.
 
 ## Install
 
@@ -17,14 +17,16 @@ Management starts disabled. Installation and importing data do not switch inputs
 ## Daily use
 
 - Existing picture and Game Optimizer MQTT entity IDs remain unchanged.
-- A confirmed entity adjustment to a setting defined in the standard becomes temporary. It still uses the TV's persistent setting API; this is tracked restoration, not a claim of RAM-only picture settings.
+- Changes to managed values through MQTT entities or LG's remote become temporary. Scoped subscription observations detect deviations from that preset's standard; telemetry never changes the saved standard. Adjustments still use the TV's persistent setting API; this is tracked restoration, not RAM-only picture settings.
 - **Restore standard** resets managed saved banks using the current day/night values. It works even when another input is active. If the TV is off, the restore remains pending until it is available.
-- **Save current adjustments as standard** reads back and promotes tracked adjustments in the active context. Apple TV and Shield share a standard when they share the same TV preset.
+- **Save current adjustments as standard** reads back and promotes tracked adjustments, including remote edits, in the active context. Apple TV and Shield share a standard when they share the same TV preset.
 - A confirmed TV `off` state ends the session. Pending overrides restore on the next available wake. `unknown`/`unavailable`, HDMI format changes, and Home Assistant restarts do not by themselves end a session.
 - Day/night changes respect temporary overrides. Restoring after sunset uses the night standard, not a stale daytime snapshot.
 - **Profile status** and **Temporary adjustments** show compact status. Full documents are kept out of entity attributes and the recorder.
 
-Only settings explicitly defined in the imported document are managed. Direct changes from LG's own remote and settings outside the document are not automatically classified as temporary; an explicit Restore standard can reset managed values changed outside Home Assistant. Custom Game Optimizer genres need their own saved-bank definitions.
+Only settings explicitly defined in the imported document and reported with matching native dimensions are tracked. Unsupported or unconfigured presets are not automatically learned. Custom Game Optimizer genres need their own saved-bank definitions. Observations can also detect existing deviations when a preset is next observed; no periodic sweep of inactive presets is added. An explicit Restore standard can reset all managed values regardless of how they were changed.
+
+Remote-edit tracking uses the bridge's existing settings subscriptions. Native input/range/ALLM transitions compare each preset with its own saved values, and automatic environment writes are excluded. Remote-button bursts update in memory immediately and coalesce durable HA writes into half-second batches. Confirmed TV off and integration shutdown flush pending tracking. No additional recurring TV reads, TV-side tracking files, or per-adjustment logs are created. Normal MQTT outages are not treated as a power cycle; changes made while disconnected are detected when their preset is observed again.
 
 ## Data and device bindings
 

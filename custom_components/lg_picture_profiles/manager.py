@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from copy import deepcopy
 from datetime import UTC, datetime
@@ -68,11 +69,19 @@ class ProfileManager:
         self._sync_again = False
         self._last_transport_available = False
         self._override_versions: dict[tuple[str, str], str] = {}
+        self._observations: dict[tuple[str, str], tuple[datetime, object]] = {}
+        self._observation_serial = 0
+        self._observation_save = None
+        self._applying_values: dict[tuple[str, str], tuple] = {}
         self._jobs: set[asyncio.Task] = set()
         self._stopping = False
         self._loaded = False
         self.transport = transport or BridgeTransport(
-            hass, self.config[CONF_BRIDGE_TOPIC], self._bridge_changed, self._settings_status
+            hass,
+            self.config[CONF_BRIDGE_TOPIC],
+            self._bridge_changed,
+            self._settings_status,
+            self._settings_observed,
         )
 
     @property
@@ -94,6 +103,13 @@ class ProfileManager:
     def tv_on(self) -> bool:
         state = self.hass.states.get(self.config[CONF_TV_ENTITY])
         return bool(state and state.state == "on")
+
+    @property
+    def off_confirmed(self) -> bool:
+        state = self.hass.states.get(self.config[CONF_TV_ENTITY])
+        if state and state.state in ("on", "off"):
+            return state.state == "off"
+        return self.data["last_power"] == "off"
 
     @property
     def available(self) -> bool:
@@ -159,6 +175,9 @@ class ProfileManager:
         return result
 
     async def persist(self) -> None:
+        if self._observation_save:
+            self._observation_save.cancel()
+            self._observation_save = None
         await self.store.async_save(deepcopy(self.data))
         self.notify()
 
@@ -256,8 +275,97 @@ class ProfileManager:
         self._spawn(self.async_user_results(status.get("results") or {}))
         self.notify()
 
+    @callback
+    def _settings_observed(self, observations: list[dict]) -> None:
+        """Track scoped deviations, including LG remote edits, without reading the TV.
+
+        Native preset loads are compared with their own bank, never the previous
+        input/mode. During an environment transition both the last confirmed and
+        new standard are ordinary values; our in-flight writes are not user edits.
+        """
+        if self._stopping or not self.document or not self.data["enabled"] or not self.room:
+            return
+        try:
+            lights = self.lights()
+        except HomeAssistantError:
+            return
+        changed = False
+        environment = self.data["environment"]
+        for observation in observations:
+            try:
+                if not isinstance(observation, dict) or not isinstance(
+                    observation.get("target"), dict
+                ):
+                    continue
+                key = observation["key"]
+                bank = find_bank(self.document, observation["target"], key)
+                value = observation["value"]
+                if not bank or value is None or len(json.dumps(value, allow_nan=False)) > 2048:
+                    continue
+                stamp = datetime.fromisoformat(observation["observed_at"])
+                if stamp.tzinfo is None:
+                    continue
+                if self.data["tracked_since"] and stamp < datetime.fromisoformat(
+                    self.data["tracked_since"]
+                ):
+                    continue
+            except KeyError, TypeError, ValueError:
+                continue
+            identity = (bank["id"], key)
+            previous = self._observations.get(identity)
+            if previous and stamp < previous[0]:
+                continue
+            self._observations[identity] = (stamp, deepcopy(value))
+            if previous and equal(value, previous[1]):
+                continue
+            own = self._applying_values.get(identity)
+            if own and (
+                (equal(value, own[1]) and self._override_versions.get(identity) == own[2])
+                or (equal(value, own[0]) and previous is None)
+            ):
+                continue
+            baseline = desired(bank, self.room, lights)[key]
+            standard = equal(value, baseline)
+            if environment and key in environment_keys(bank):
+                standard |= equal(
+                    value, desired(bank, environment["room"], environment["lights"])[key]
+                )
+            overrides = self.data["overrides"].setdefault(bank["id"], {})
+            record_changed = (standard and key in overrides) or (
+                not standard and (key not in overrides or not equal(overrides[key], value))
+            )
+            # A first replay of an already journaled edit is not a newer edit
+            # racing an in-progress restore after an HA restart.
+            if record_changed or previous is not None:
+                self._observation_serial += 1
+                self._override_versions[identity] = f"observation-{self._observation_serial}"
+            if standard:
+                if key in overrides:
+                    overrides.pop(key)
+                    changed = True
+            elif key not in overrides or not equal(overrides[key], value):
+                overrides[key] = deepcopy(value)
+                changed = True
+            if not overrides:
+                self.data["overrides"].pop(bank["id"], None)
+            if bank["target"]["category"] == "other" and key == "gameGenre":
+                self.context["gameGenre"] = value
+        if changed:
+            if self.off_confirmed and self.override_count:
+                self.data["pending_restore"] = True
+            self.notify()
+            # A held remote button can emit many values. Only the latest record
+            # is saved, at most twice per second; off/save/unload flush it sooner.
+            if not self._observation_save:
+                self._observation_save = self.hass.loop.call_later(0.5, self._save_observations)
+
+    @callback
+    def _save_observations(self) -> None:
+        self._observation_save = None
+        self._spawn(self.persist())
+
     async def async_user_results(self, results: dict) -> None:
-        """Only confirmed user commands create temporary overrides; telemetry never learns standards."""
+        """Confirmed MQTT commands supplement observations; neither learns standards."""
         # Process in-memory changes before awaiting persistence. Holding the
         # operation lock here could let a restore overwrite a just-acknowledged
         # user command while its tracking event waited for that same lock.
@@ -292,7 +400,7 @@ class ProfileManager:
             if bank["target"]["category"] == "other" and key == "gameGenre":
                 self.context["gameGenre"] = value
         if changed:
-            if not self.tv_on and self.override_count:
+            if self.off_confirmed and self.override_count:
                 self.data["pending_restore"] = True
             await self.persist()
 
@@ -314,6 +422,7 @@ class ProfileManager:
                     "Restore or save temporary adjustments before replacing standards"
                 )
             self.data["document"] = document
+            self._observations.clear()
             self._loaded = True
             self.data["environment"] = None
             self.data["tracked_since"] = (
@@ -331,6 +440,7 @@ class ProfileManager:
                     "Import your verified standards before enabling management"
                 )
             if enabled and (not self.data["enabled"] or not self.data["tracked_since"]):
+                self._observations.clear()
                 self.data["tracked_since"] = (
                     datetime.now(UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
                 )
@@ -360,6 +470,14 @@ class ProfileManager:
                 snapshots[bank["id"]] = row["settings"]
         return snapshots
 
+    def _remember_applied(self, identity, value, version) -> None:
+        # Readback also advances the comparison cache if its MQTT echo was lost.
+        # A newer observed/user edit must keep its own value and version.
+        if self._override_versions.get(identity) == version:
+            previous = self._observations.get(identity)
+            stamp = previous[0] if previous else datetime.min.replace(tzinfo=UTC)
+            self._observations[identity] = (stamp, deepcopy(value))
+
     async def _apply(self, selections: list[tuple[dict, set[str]]], *, keep_overrides: bool) -> int:
         if not self.available or not self.room:
             raise HomeAssistantError("TV and sun state must be available")
@@ -371,6 +489,7 @@ class ProfileManager:
         self.applying = True
         self.notify()
         try:
+            versions = self._override_versions.copy()
             snapshots = await self.read_banks(selections)
             operations = []
             for bank, keys in selections:
@@ -379,6 +498,9 @@ class ProfileManager:
                 if keep_overrides:
                     keys = keys - self.data["overrides"].get(bank["id"], {}).keys()
                 delta = {k: values[k] for k in keys if not equal(values[k], expected[k])}
+                for key in keys - delta.keys():
+                    identity = (bank["id"], key)
+                    self._remember_applied(identity, values[key], versions.get(identity))
                 if delta:
                     operations.append(
                         {
@@ -391,6 +513,14 @@ class ProfileManager:
             changed = 0
             for start in range(0, len(operations), 4):
                 group = operations[start : start + 4]
+                for operation in group:
+                    for key, value in operation["settings"].items():
+                        identity = (operation["id"], key)
+                        self._applying_values[identity] = (
+                            operation["expected"][key],
+                            value,
+                            self._override_versions.get(identity),
+                        )
                 reply = await self.transport.async_command("apply", group)
                 result = {b["id"]: b for b in reply.get("banks", [])}
                 for operation in group:
@@ -407,10 +537,14 @@ class ProfileManager:
                             "Bridge did not confirm the requested saved settings"
                         )
                     changed += len(actual.get("changed", []))
+                    for key, value in operation["settings"].items():
+                        identity = (operation["id"], key)
+                        self._remember_applied(identity, value, self._applying_values[identity][2])
             self.last_changed_count = changed
             self.last_error = None
             return changed
         finally:
+            self._applying_values.clear()
             self.applying = False
             self.notify()
 
@@ -428,6 +562,12 @@ class ProfileManager:
                     )
                     for b in self.document["banks"]
                 ]
+                # Preserve the restore scope even if a matching observation
+                # clears an override before all writes/readbacks have completed.
+                self.data["restore_requests"] = {
+                    b["id"]: sorted(keys) for b, keys in selected if keys
+                }
+                await self.persist()
                 versions = self._override_versions.copy()
                 changed += await self._apply(selected, keep_overrides=False)
                 self._clear_unchanged_overrides(selected, versions)

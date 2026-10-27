@@ -119,3 +119,22 @@ async def test_exhausted_timeout_leaves_no_pending_future(transport, monkeypatch
     with pytest.raises(HomeAssistantError, match="timed out"):
         await transport.async_command("apply", [])
     assert not transport._pending
+
+
+async def test_only_bounded_live_observations_are_delivered(transport):
+    received = []
+    transport.observations = received.append
+    payload = {"protocol": 1, "observations": [{"key": "color", "value": 55}]}
+    transport._observations(message(payload, retain=True))
+    for invalid in [
+        None,
+        [],
+        {},
+        {**payload, "protocol": 2},
+        {**payload, "observations": [{}] * 129},
+    ]:
+        transport._observations(message(invalid))
+    transport._observations(SimpleNamespace(payload="bad json", retain=False))
+    assert not received
+    transport._observations(message(payload))
+    assert received == [payload["observations"]]

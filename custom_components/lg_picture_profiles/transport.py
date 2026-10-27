@@ -15,12 +15,18 @@ from homeassistant.exceptions import HomeAssistantError
 
 class BridgeTransport:
     def __init__(
-        self, hass: HomeAssistant, base: str, changed: Callable, settings: Callable
+        self,
+        hass: HomeAssistant,
+        base: str,
+        changed: Callable,
+        settings: Callable,
+        observations: Callable | None = None,
     ) -> None:
         self.hass = hass
         self.base = base
         self.changed = changed
         self.settings = settings
+        self.observations = observations
         self.session: str | None = None
         self.online = False
         self.ready = False
@@ -32,6 +38,7 @@ class BridgeTransport:
             ("/profiles/status", self._status),
             ("/availability", self._availability),
             ("/settings/status", self._settings),
+            ("/settings/observations", self._observations),
         ]:
             self._unsub.append(
                 await mqtt.async_subscribe(self.hass, self.base + suffix, handler, qos=0)
@@ -97,6 +104,22 @@ class BridgeTransport:
     @property
     def available(self) -> bool:
         return self.online and self.ready and self.session is not None
+
+    @callback
+    def _observations(self, message) -> None:
+        if message.retain or not self.observations or len(message.payload) > 200000:
+            return
+        try:
+            payload = json.loads(message.payload)
+        except ValueError, TypeError:
+            return
+        if (
+            isinstance(payload, dict)
+            and payload.get("protocol") == 1
+            and isinstance(payload.get("observations"), list)
+            and len(payload["observations"]) <= 128
+        ):
+            self.observations(payload["observations"])
 
     async def async_command(self, action: str, banks: list[dict]) -> dict:
         if not self.available:
