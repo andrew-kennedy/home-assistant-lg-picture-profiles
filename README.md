@@ -72,6 +72,8 @@ For a Game Optimizer bank, use `category: other`, dimensions such as `{gameInput
 
 The optional `brightness_role` is `movie_sdr` or `game_sdr`. A configured HA helper supplies that role's brightness. Saving a brightness adjustment as standard updates the assigned helper, which is shared by all banks using that role. Without helpers, values come directly from the document. No unit-specific white-balance or color-management calibration is copied.
 
+Under the integration's **Configure** screen, clear a brightness-helper selector and submit to use the document's values for that role and room. Cleared selections stay cleared when reopening Configure or restarting Home Assistant. Existing selections remain until you edit them. The Name field also updates the integration's displayed name.
+
 ## Operation and failure handling
 
 The TV retains native input/range/ALLM mode selection. The companion reacts to sunrise/sunset, brightness-helper changes, confirmed TV power events, and bridge recovery. It performs no periodic settings polling and writes only differences. Reconnects and power-on with an already confirmed environment do not rewrite profiles.

@@ -40,7 +40,9 @@ class ProfileManager:
     def __init__(self, hass: HomeAssistant, entry, *, transport=None, store=None) -> None:
         self.hass = hass
         self.entry = entry
-        self.config = {**entry.data, **entry.options}
+        # Options are a complete form snapshot. An omitted optional helper is a
+        # deliberate removal, not a request to inherit its original setup value.
+        self.config = dict(entry.options or entry.data)
         self.store = store or Store(
             hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}", atomic_writes=True
         )

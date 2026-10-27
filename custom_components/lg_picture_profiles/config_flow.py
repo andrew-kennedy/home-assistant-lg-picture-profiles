@@ -34,9 +34,12 @@ def schema(defaults=None):
         ): selector.EntitySelector(selector.EntitySelectorConfig(domain="sun")),
     }
     for key in (CONF_BRIGHT_HELPER, CONF_DARK_HELPER, CONF_GAME_HELPER):
-        fields[vol.Optional(key, **({"default": values[key]} if values.get(key) else {}))] = (
-            selector.EntitySelector(selector.EntitySelectorConfig(domain="input_number"))
-        )
+        # Suggestions prefill the UI without reinserting a helper the user cleared.
+        fields[
+            vol.Optional(
+                key, description={"suggested_value": values[key]} if values.get(key) else None
+            )
+        ] = selector.EntitySelector(selector.EntitySelectorConfig(domain="input_number"))
     return vol.Schema(fields)
 
 
@@ -75,11 +78,21 @@ class LGPictureProfilesOptionsFlow(config_entries.OptionsFlow):
             if user_input.get(CONF_BRIDGE_TOPIC) != self.config_entry.data[CONF_BRIDGE_TOPIC]:
                 errors[CONF_BRIDGE_TOPIC] = "bridge_change"
             else:
+                # Persist the complete form and its title together. The flow manager's
+                # subsequent identical options save is a no-op, so this reloads once.
+                self.hass.config_entries.async_update_entry(
+                    self.config_entry, title=user_input["name"], options=user_input
+                )
                 return self.async_create_entry(title="", data=user_input)
         return self.async_show_form(
             step_id="init",
             data_schema=schema(
-                user_input or {**self.config_entry.data, **self.config_entry.options}
+                user_input
+                if user_input is not None
+                else {
+                    **(self.config_entry.options or self.config_entry.data),
+                    "name": self.config_entry.title,
+                }
             ),
             errors=errors,
         )
