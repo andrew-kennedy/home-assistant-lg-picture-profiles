@@ -58,7 +58,7 @@ async def editor_command(hass, connection, message):
     action = command.pop("action", None)
     try:
         if action == "get":
-            result = await manager.async_preview()
+            result = await manager.async_snapshot()
         elif action == "backup":
             result = await manager.async_export_backup()
         elif action == "restore_backup":

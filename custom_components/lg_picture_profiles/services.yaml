@@ -41,7 +41,7 @@ restore_standard:
           options: [all, active]
 save_standard:
   name: Save adjustments as standard
-  description: Ask the TV to promote tracked temporary adjustments to the standard and synchronize any linked brightness helper.
+  description: Ask the TV to promote tracked temporary adjustments to its saved standard.
   fields:
     entry_id:
       name: Integration entry ID
@@ -63,7 +63,7 @@ reconcile:
         text:
 preview:
   name: Preview differences
-  description: Show the current collection, tracked adjustments and status, or the saved backup while offline.
+  description: Show a compact status summary and tracked temporary changes compared with the effective standards. Uses the saved snapshot while offline; it does not audit every native TV setting. Use Export standard profiles or Export complete profile backup for full data.
   fields:
     entry_id:
       name: Integration entry ID

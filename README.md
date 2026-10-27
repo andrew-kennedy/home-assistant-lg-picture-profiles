@@ -45,7 +45,7 @@ The backup is complete for **managed picture profiles**, not a firmware or whole
 - `restore_standard`: reset `active` or `all` managed banks on the TV.
 - `save_standard`: explicitly promote tracked `active` or `all` adjustments.
 - `reconcile`: ask the TV to retry pending recovery/environment work.
-- `preview`: show the TV's collection/status, or the saved backup while offline.
+- `preview`: a compact status summary and tracked temporary differences against effective room/brightness standards. Includes inactive-profile adjustments and pending-restore counts. It reads the bridge’s cached state, or labels the saved snapshot when offline; it does not audit all native settings. Use the exports for the full collection or backup.
 
 Use the integration's **Configure** screen to rename it or change the sun/TV entities. The MQTT base is fixed per entry; add another entry for another TV. Never edit live `.storage` manually. Retired recipe/environment automations must remain removed so they do not compete with TV ownership; the bridge rejects legacy profile writes after initialization. HDMI icon commands and source/CEC/power automations continue independently.
 

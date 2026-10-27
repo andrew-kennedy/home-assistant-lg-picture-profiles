@@ -20,6 +20,7 @@ from .const import (
     STORAGE_VERSION,
 )
 from .model import validate
+from .preview import summarize
 from .transport import BridgeTransport
 
 
@@ -348,6 +349,15 @@ class ProfileManager:
         return await self.async_rpc("reconcile")
 
     async def async_preview(self):
+        return summarize(
+            await self.async_snapshot(),
+            available=self.available,
+            backup_saved=bool(self.saved["backup"]),
+            error=self.last_error,
+        )
+
+    async def async_snapshot(self):
+        """Full editor state; the public preview action is intentionally smaller."""
         if self.available:
             return await self.async_rpc("get")
         state = deepcopy(self.snapshot)
