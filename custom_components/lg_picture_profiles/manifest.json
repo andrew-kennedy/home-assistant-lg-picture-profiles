@@ -1,13 +1,18 @@
 {
   "domain": "lg_picture_profiles",
   "name": "LG Picture Profiles",
-  "codeowners": ["@andrew-kennedy"],
+  "codeowners": [
+    "@andrew-kennedy"
+  ],
   "config_flow": true,
-  "dependencies": ["mqtt"],
+  "dependencies": [
+    "frontend",
+    "mqtt"
+  ],
   "documentation": "https://github.com/andrew-kennedy/home-assistant-lg-picture-profiles",
   "integration_type": "service",
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/andrew-kennedy/home-assistant-lg-picture-profiles/issues",
   "requirements": [],
-  "version": "0.2.0"
+  "version": "0.3.0"
 }

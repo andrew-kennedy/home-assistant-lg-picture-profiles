@@ -8,7 +8,6 @@ from homeassistant.data_entry_flow import FlowResultType
 
 from custom_components.lg_picture_profiles.config_flow import LGPictureProfilesConfigFlow
 from custom_components.lg_picture_profiles.manager import ProfileManager
-from custom_components.lg_picture_profiles.model import desired
 
 from .conftest import FakeTransport, MemoryStore, document
 
@@ -90,12 +89,9 @@ async def test_saved_options_remain_authoritative_after_runtime_reload(configure
         runtime._schedule_sync = lambda: None
         await runtime.async_start()
         assert runtime.config == edited
-        assert runtime.lights() == {}
-        assert (
-            desired(runtime.document["banks"][0], runtime.room, runtime.lights())["backlight"] == 3
-        )
+        assert all(key not in runtime.config for key in HELPERS)
         assert runtime.document == baseline
-        assert runtime.override_count == 1
+        assert runtime.saved["legacy"]["overrides"] == saved["overrides"]
         await runtime.async_stop()
 
 
@@ -103,7 +99,7 @@ async def test_initial_entries_without_options_keep_their_configured_helpers(con
     hass, entry = configured
     runtime = ProfileManager(hass, entry, transport=FakeTransport(document()), store=MemoryStore())
     assert runtime.config == SETUP
-    assert runtime.lights() == {"movie_sdr": 25, "game_sdr": 25}
+    assert all(runtime.config[key] == SETUP[key] for key in HELPERS)
 
 
 async def test_changed_bridge_rejected_without_restoring_cleared_helpers(configured):

@@ -19,6 +19,10 @@ class ManagementSwitch(ProfileEntity, SwitchEntity):
         super().__init__(entry, "management")
 
     @property
+    def available(self):
+        return self.manager.available and bool(self.manager.document)
+
+    @property
     def is_on(self):
         return self.manager.data["enabled"]
 

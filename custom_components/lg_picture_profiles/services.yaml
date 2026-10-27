@@ -1,6 +1,6 @@
 import_profiles:
   name: Import standard profiles
-  description: Validate and save a profile collection. Does not capture observed values or enable management. Existing temporary adjustments must be restored or saved first.
+  description: Validate and import a profile collection into the TV, replacing its standards and queuing verified restoration. A new collection starts with management enabled.
   fields:
     entry_id:
       name: Integration entry ID
@@ -27,7 +27,7 @@ export_profiles:
         text:
 restore_standard:
   name: Restore standard
-  description: Restore saved values for the selected scope using the current day/night settings. An all-bank restore is queued if the TV is off.
+  description: Restore saved values for the selected scope using the current day/night settings. Requires an available bridge; native standby restores remain queued on the TV.
   fields:
     entry_id:
       name: Integration entry ID
@@ -41,7 +41,7 @@ restore_standard:
           options: [all, active]
 save_standard:
   name: Save adjustments as standard
-  description: Read back tracked temporary adjustments and explicitly promote them to the standard. The current room variant and any assigned brightness helper are updated.
+  description: Ask the TV to promote tracked temporary adjustments to the standard and synchronize any linked brightness helper.
   fields:
     entry_id:
       name: Integration entry ID
@@ -55,7 +55,7 @@ save_standard:
           options: [active, all]
 reconcile:
   name: Update picture environment
-  description: Apply pending session restores and changed day/night values. Already confirmed environments send no commands.
+  description: Ask the TV to retry pending session restores and changed room values.
   fields:
     entry_id:
       name: Integration entry ID
@@ -63,9 +63,40 @@ reconcile:
         text:
 preview:
   name: Preview differences
-  description: Read saved TV settings and report differences from the standards without changing the TV.
+  description: Show the current collection, tracked adjustments and status, or the saved backup while offline.
   fields:
     entry_id:
       name: Integration entry ID
       selector:
         text:
+
+export_backup:
+  name: Export complete profile backup
+  description: Return the verified complete TV snapshot stored in Home Assistant, including temporary adjustments and recovery scopes.
+  fields:
+    entry_id:
+      name: Integration entry ID
+      selector:
+        text:
+    previous:
+      name: Previous standard revision
+      description: Zero returns the latest backup; 1–5 returns an earlier saved standard revision when available.
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 5
+          step: 1
+restore_backup:
+  name: Restore complete profile backup
+  description: Restore TV standards and preferences from a verified complete snapshot. Historical temporary values are kept in the file, not replayed.
+  fields:
+    entry_id:
+      name: Integration entry ID
+      selector:
+        text:
+    backup:
+      name: Backup envelope
+      required: true
+      selector:
+        object:

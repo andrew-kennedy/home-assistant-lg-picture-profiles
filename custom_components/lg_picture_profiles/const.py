@@ -1,7 +1,7 @@
 """Integration constants."""
 
 DOMAIN = "lg_picture_profiles"
-PLATFORMS = ["button", "sensor", "switch"]
+PLATFORMS = ["button", "sensor", "switch", "number"]
 CONF_BRIDGE_TOPIC = "bridge_topic"
 CONF_TV_ENTITY = "tv_entity"
 CONF_SUN_ENTITY = "sun_entity"

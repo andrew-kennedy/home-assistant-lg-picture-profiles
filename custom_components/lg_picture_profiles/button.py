@@ -29,9 +29,10 @@ class ProfileButton(ProfileEntity, ButtonEntity):
 
     @property
     def available(self):
-        return bool(self.manager.document) and (
-            self.action == "restore_standard"
-            or (self.manager.available and self.manager.context.get("ready"))
+        return (
+            bool(self.manager.document)
+            and self.manager.available
+            and (self.action == "restore_standard" or self.manager.context.get("ready"))
         )
 
     async def async_press(self):

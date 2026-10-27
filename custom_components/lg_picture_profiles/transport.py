@@ -21,12 +21,16 @@ class BridgeTransport:
         changed: Callable,
         settings: Callable,
         observations: Callable | None = None,
+        backup: Callable | None = None,
     ) -> None:
         self.hass = hass
         self.base = base
         self.changed = changed
         self.settings = settings
         self.observations = observations
+        self.backup = backup
+        self.manager_status: dict = {}
+        self.api_version = 1
         self.session: str | None = None
         self.online = False
         self.ready = False
@@ -39,6 +43,7 @@ class BridgeTransport:
             ("/availability", self._availability),
             ("/settings/status", self._settings),
             ("/settings/observations", self._observations),
+            ("/profiles/backup", self._backup),
         ]:
             self._unsub.append(
                 await mqtt.async_subscribe(self.hass, self.base + suffix, handler, qos=0)
@@ -76,6 +81,9 @@ class BridgeTransport:
         if self.session and session != self.session:
             self._fail_pending("TV bridge reconnected; command outcome requires a fresh read")
         self.session = session
+        self.api_version = status.get("api_version", self.api_version)
+        if isinstance(status.get("manager"), dict):
+            self.manager_status = status["manager"]
         self.ready = status.get("ready") is True
         for rid, result in (status.get("results") or {}).items():
             future = self._pending.get(rid)
@@ -121,10 +129,41 @@ class BridgeTransport:
         ):
             self.observations(payload["observations"])
 
-    async def async_command(self, action: str, banks: list[dict]) -> dict:
+    @callback
+    def _backup(self, message) -> None:
+        if not self.backup or len(message.payload) > 1000000:
+            return
+        try:
+            envelope = json.loads(message.payload)
+        except ValueError, TypeError:
+            return
+        self.backup(envelope)
+
+    async def async_publish_context(self, room: str) -> None:
+        await mqtt.async_publish(
+            self.hass,
+            self.base + "/profiles/environment",
+            json.dumps({"protocol": 1, "room": room}),
+            qos=1,
+            retain=True,
+        )
+
+    async def async_ack_backup(self, state: dict, checksum: str) -> None:
+        await mqtt.async_publish(
+            self.hass,
+            self.base + "/profiles/backup/ack",
+            json.dumps(
+                {k: state[k] for k in ("owner_id", "instance_id", "sequence")}
+                | {"sha256": checksum}
+            ),
+            qos=1,
+            retain=False,
+        )
+
+    async def async_command(self, action: str, banks: list[dict] | None = None, **fields) -> dict:
         if not self.available:
             raise HomeAssistantError(
-                "TV bridge unavailable or saved-bank API missing; bridge 0.11.0 or newer is required"
+                "TV bridge unavailable; turn on the TV and check the bridge connection"
             )
         rid = "ha-profile-" + uuid4().hex
         session = self.session
@@ -134,7 +173,11 @@ class BridgeTransport:
                 "request_id": rid,
                 "session_id": session,
                 "expires_at": time.time() + 45,
-                "policy": {"action": action, "banks": banks},
+                "policy": {
+                    "action": action,
+                    **({"banks": banks} if banks is not None else {}),
+                    **fields,
+                },
             },
             allow_nan=False,
         )

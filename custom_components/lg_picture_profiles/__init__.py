@@ -9,6 +9,7 @@ from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 
+from . import panel
 from .const import DOMAIN, PLATFORMS
 from .manager import ProfileManager
 from .model import ProfileError
@@ -29,6 +30,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: LGProfilesEntry) -> bool
     try:
         await manager.async_start()
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+        await panel.async_register(hass, entry)
     except Exception:
         await manager.async_stop()
         hass.data[DOMAIN].pop(entry.entry_id, None)
@@ -46,6 +48,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: LGProfilesEntry) -> boo
     if not await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         return False
     await entry.runtime_data.async_stop()
+    panel.async_remove(hass, entry)
     hass.data[DOMAIN].pop(entry.entry_id, None)
     if not hass.data[DOMAIN]:
         for name in (
@@ -55,6 +58,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: LGProfilesEntry) -> boo
             "save_standard",
             "reconcile",
             "preview",
+            "export_backup",
+            "restore_backup",
         ):
             hass.services.async_remove(DOMAIN, name)
     return True
@@ -93,6 +98,10 @@ def _register_services(hass: HomeAssistant) -> None:
                     "document": document,
                     "yaml": yaml.safe_dump(document, sort_keys=False, allow_unicode=True),
                 }
+            if call.service == "export_backup":
+                return await manager.async_export_backup(call.data.get("previous", 0))
+            if call.service == "restore_backup":
+                return await manager.async_restore_backup(call.data["backup"])
             if call.service == "restore_standard":
                 return await manager.async_restore(call.data.get("scope", "all"))
             if call.service == "save_standard":
@@ -110,10 +119,18 @@ def _register_services(hass: HomeAssistant) -> None:
         "save_standard",
         "reconcile",
         "preview",
+        "export_backup",
+        "restore_backup",
     ):
         fields = dict(base)
         if name == "import_profiles":
             fields.update({vol.Optional("document"): dict, vol.Optional("yaml"): str})
+        if name == "restore_backup":
+            fields[vol.Required("backup")] = dict
+        if name == "export_backup":
+            fields[vol.Optional("previous", default=0)] = vol.All(
+                vol.Coerce(int), vol.Range(min=0, max=5)
+            )
         if name in ("restore_standard", "save_standard"):
             fields[
                 vol.Optional("scope", default="all" if name == "restore_standard" else "active")
@@ -124,6 +141,6 @@ def _register_services(hass: HomeAssistant) -> None:
             handle,
             schema=vol.Schema(fields),
             supports_response=SupportsResponse.ONLY
-            if name in ("export_profiles", "preview")
+            if name in ("export_profiles", "preview", "export_backup")
             else SupportsResponse.OPTIONAL,
         )
