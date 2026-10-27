@@ -2,10 +2,12 @@ from copy import deepcopy
 from datetime import UTC, datetime
 
 import pytest
+from homeassistant.exceptions import HomeAssistantError
 
+from custom_components.lg_picture_profiles.manager import ProfileManager
 from custom_components.lg_picture_profiles.model import ProfileError, validate
 
-from .conftest import adjust, document
+from .conftest import MemoryStore, adjust, document
 
 
 async def test_failed_load_does_not_replace_existing_store(manager):
@@ -57,3 +59,53 @@ def test_import_rejects_wrong_signal_family():
     doc["banks"][2]["settings"]["pictureMode"] = "hdrGame"
     with pytest.raises(ProfileError, match="signal range"):
         validate(doc)
+
+
+async def test_active_devices_exclude_port_controls_and_missing_signal(manager):
+    manager.document["banks"].append(
+        {
+            "id": "hdmi3_port",
+            "name": "HDMI 3 controls",
+            "devices": ["switch"],
+            "target": {"category": "other", "dimension": {"gameInput": "hdmi3"}},
+            "settings": {"enableALLM": "on"},
+        }
+    )
+    manager.context = {"input": "hdmi3", "range": "sdr", "mode": "filmMaker", "ready": True}
+    assert manager.active_names == ["Apple TV", "Shield"]
+    manager.context["ready"] = False
+    assert manager.active_names == []
+
+
+async def test_interrupted_full_restore_is_journaled_without_a_temporary_edit(manager):
+    manager.transport.values["movie_sdr"]["color"] = 70  # An LG remote edit, not an MQTT edit.
+    manager.transport.fail_apply = True
+    with pytest.raises(HomeAssistantError):
+        await manager.async_restore()
+    assert manager.override_count == 0
+    assert manager.store.saved["restore_requests"]
+    restored = ProfileManager(
+        manager.hass, manager.entry, transport=manager.transport, store=MemoryStore(manager.data)
+    )
+    restored._schedule_sync = lambda: None
+    await restored.async_start()
+    manager.transport.fail_apply = False
+    await restored.async_reconcile()
+    assert restored.transport.values["movie_sdr"]["color"] == "50"
+    assert not restored.data["restore_requests"]
+    assert not restored.data["pending_restore"]
+    await restored.async_stop()
+
+
+async def test_new_edit_during_explicit_restore_remains_temporary(manager):
+    await adjust(manager, "game_hdr", "gameSharpness", 10)
+
+    async def after_write():
+        await adjust(manager, "game_hdr", "gameSharpness", 9, "newer-edit")
+
+    manager.transport.on_apply = after_write
+    await manager.async_restore()
+    assert manager.data["overrides"]["game_hdr"]["gameSharpness"] == 9
+    assert not manager.data["pending_restore"]
+    await manager.async_reconcile()
+    assert manager.transport.values["game_hdr"]["gameSharpness"] == 9

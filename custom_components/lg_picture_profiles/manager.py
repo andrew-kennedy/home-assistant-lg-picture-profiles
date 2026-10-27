@@ -49,6 +49,7 @@ class ProfileManager:
             "overrides": {},
             "enabled": False,
             "pending_restore": False,
+            "restore_requests": {},
             "last_power": None,
             "seen_requests": [],
             "tracked_since": None,
@@ -112,13 +113,14 @@ class ProfileManager:
 
     @property
     def active_names(self) -> list[str]:
-        if not self.document:
+        if not self.document or not self.context.get("ready"):
             return []
         return list(
             dict.fromkeys(
                 self.document["devices"][d]
                 for b in self.document["banks"]
                 if is_active(b, self.context)
+                and {"pictureMode", "dynamicRange"} & b["target"]["dimension"].keys()
                 for d in b.get("devices", [])
             )
         )
@@ -299,7 +301,7 @@ class ProfileManager:
     async def async_import(self, document: dict) -> dict:
         document = validate(document)
         async with self._lock:
-            if self.override_count:
+            if self.override_count or self.data["restore_requests"]:
                 raise HomeAssistantError(
                     "Restore or save temporary adjustments before replacing standards"
                 )
@@ -411,12 +413,17 @@ class ProfileManager:
             changed = 0
             if self.data["pending_restore"]:
                 selected = [
-                    (b, set(self.data["overrides"].get(b["id"], {})))
+                    (
+                        b,
+                        set(self.data["overrides"].get(b["id"], {}))
+                        | set(self.data["restore_requests"].get(b["id"], [])),
+                    )
                     for b in self.document["banks"]
                 ]
                 versions = self._override_versions.copy()
                 changed += await self._apply(selected, keep_overrides=False)
                 self._clear_unchanged_overrides(selected, versions)
+                self.data["restore_requests"] = {}
                 self.data["pending_restore"] = False
                 await self.persist()
             environment = {"room": self.room, "lights": self.lights()}
@@ -438,26 +445,40 @@ class ProfileManager:
             ]
             if scope == "active" and (not self.available or not self.context.get("ready")):
                 raise HomeAssistantError("An active context is required")
+            # Journal the requested scope before the first TV write, including
+            # remote-control changes that were never tracked as temporary.
+            requests = self.data["restore_requests"]
+            if self.data["pending_restore"]:
+                for bid, values in self.data["overrides"].items():
+                    requests[bid] = sorted(set(requests.get(bid, [])) | values.keys())
+            for bank, keys in selected:
+                requests[bank["id"]] = sorted(set(requests.get(bank["id"], [])) | keys)
+            self.data["pending_restore"] = True
+            await self.persist()
             if not self.available:
-                # Persist an explicit full restore request across restarts.
-                for bank, keys in selected:
-                    self.data["overrides"].setdefault(bank["id"], {}).update(
-                        {k: None for k in keys}
-                    )
-                self.data["pending_restore"] = True
-                await self.persist()
                 return {"deferred": True}
             versions = self._override_versions.copy()
-            changed = await self._apply(selected, keep_overrides=False)
+            try:
+                changed = await self._apply(selected, keep_overrides=False)
+            except HomeAssistantError as error:
+                self.last_error = str(error)
+                self.notify()
+                raise
             self._clear_unchanged_overrides(selected, versions)
-            self.data["pending_restore"] = bool(
-                self.data["overrides"] and self.data["pending_restore"]
-            )
+            for bank, keys in selected:
+                remaining = set(requests.get(bank["id"], [])) - keys
+                if remaining:
+                    requests[bank["id"]] = sorted(remaining)
+                else:
+                    requests.pop(bank["id"], None)
+            self.data["pending_restore"] = bool(requests)
             await self.persist()
             return {"changed_settings": changed}
 
     async def async_save_standard(self, scope: str = "active") -> dict:
         async with self._lock:
+            if self.data["restore_requests"]:
+                raise HomeAssistantError("Complete the pending restore before saving standards")
             if (
                 not self.document
                 or not self.available
