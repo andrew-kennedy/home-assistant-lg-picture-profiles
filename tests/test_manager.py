@@ -1,5 +1,6 @@
 import hashlib
 import json
+from copy import deepcopy
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -106,7 +107,7 @@ async def test_failed_disk_write_is_not_acknowledged(manager):
     assert not manager.snapshot
 
 
-async def test_migration_preserves_standards_and_keeps_legacy_journal(manager):
+async def test_migration_keeps_legacy_until_complete_backup_is_saved(manager):
     legacy = {
         "document": document(),
         "enabled": True,
@@ -134,8 +135,103 @@ async def test_migration_preserves_standards_and_keeps_legacy_journal(manager):
     old.transport.manager_status["configured"] = True
     await old._sync()
     assert len(old.transport.calls) == 1
-    assert old.saved["legacy"] == legacy
+    assert "legacy" not in old.saved
+    assert "legacy" not in old.store.saved
     await old.async_stop()
+
+
+async def test_completed_migration_cleanup_preserves_backup_and_history_offline(manager):
+    original = {
+        "format": 2,
+        "backup": backup(sequence=3, revision=3),
+        "previous": [backup(), backup(sequence=2, revision=2)],
+        "legacy": {"document": document(), "enabled": True},
+        "migration_complete": True,
+    }
+    store = MemoryStore(original)
+    expected = {k: v for k, v in original.items() if k != "legacy"}
+    for _ in range(2):
+        transport = FakeTransport()
+        transport.available = False
+        runtime = ProfileManager(manager.hass, manager.entry, transport=transport, store=store)
+        runtime._schedule_sync = lambda: None
+        await runtime.async_start()
+        assert runtime.saved == store.saved == expected
+        assert runtime.document == document()
+        assert store.saves == 1, "Cleanup writes once, not on every reload"
+        assert not transport.calls
+        assert not transport.acks
+        await runtime.async_stop()
+
+
+@pytest.mark.parametrize("complete", [False, True])
+async def test_migration_copy_without_verified_backup_is_preserved(manager, complete):
+    original = {
+        "format": 2,
+        "backup": None,
+        "previous": [],
+        "legacy": {"document": document(), "enabled": True},
+        "migration_complete": complete,
+    }
+    store = MemoryStore(original)
+    runtime = ProfileManager(manager.hass, manager.entry, transport=FakeTransport(), store=store)
+    runtime._schedule_sync = lambda: None
+    await runtime.async_start()
+    assert runtime.saved == store.saved == original
+    assert not store.saves
+    await runtime.async_stop()
+
+
+async def test_corrupt_backup_cannot_discard_migration_copy(manager):
+    original = {
+        "format": 2,
+        "backup": {**backup(), "sha256": "invalid"},
+        "previous": [],
+        "legacy": {"document": document()},
+        "migration_complete": True,
+    }
+    store = MemoryStore(original)
+    runtime = ProfileManager(manager.hass, manager.entry, transport=FakeTransport(), store=store)
+    with pytest.raises(ProfileError, match="checksum"):
+        await runtime.async_start()
+    assert store.saved == original
+    assert not store.saves
+    await runtime.async_stop()
+
+
+async def test_failed_migration_commit_preserves_copy_and_retries_atomically(manager):
+    legacy = {"document": document(), "enabled": True}
+    manager.saved["legacy"] = legacy
+    before = deepcopy(manager.saved)
+    save = manager.store.async_save
+    manager.store.async_save = AsyncMock(side_effect=OSError("disk unavailable"))
+    with pytest.raises(OSError):
+        await manager._accept_backup(backup())
+    assert manager.saved == before
+    assert not manager.transport.acks
+    assert not manager.snapshot
+    manager.store.async_save = save
+    await manager._accept_backup(backup())
+    assert manager.saved == manager.store.saved
+    assert "legacy" not in manager.saved
+    assert manager.saved["migration_complete"]
+    assert len(manager.transport.acks) == 1
+
+
+async def test_failed_backup_revision_commit_does_not_duplicate_history(manager):
+    first = backup()
+    await manager._accept_backup(first)
+    before = deepcopy(manager.saved)
+    save = manager.store.async_save
+    manager.store.async_save = AsyncMock(side_effect=OSError("disk unavailable"))
+    next_backup = backup(sequence=2, revision=2)
+    with pytest.raises(OSError):
+        await manager._accept_backup(next_backup)
+    assert manager.saved == before
+    manager.store.async_save = save
+    await manager._accept_backup(next_backup)
+    assert manager.saved["previous"] == [first]
+    assert manager.saved["backup"] == next_backup
 
 
 async def test_old_bridge_cannot_trigger_legacy_policy(manager):
@@ -149,11 +245,14 @@ async def test_old_bridge_cannot_trigger_legacy_policy(manager):
 
 
 async def test_preexisting_tv_is_not_overwritten_by_legacy_ha(manager):
-    manager.saved["legacy"] = {"document": document(), "enabled": True}
+    legacy = {"document": document(), "enabled": True}
+    manager.saved["legacy"] = legacy
     manager.transport.manager_status["configured"] = True
     await manager._accept_backup(backup(migration_id="different-entry"))
     await manager._sync()
     assert "already has" in manager.last_error
+    assert manager.saved["legacy"] == manager.store.saved["legacy"] == legacy
+    assert not manager.saved["migration_complete"]
     assert not manager.transport.calls
 
 

@@ -28,7 +28,9 @@ Only keys defined in the collection are managed. Custom Game Optimizer genres ne
 
 Every profile or temporary-setting change publishes a **complete** retained snapshot on `<base>/profiles/backup`, coalesced into 500 ms batches during slider bursts. The TV also publishes on wake, standby, broker reconnection and HA reconnection. Full snapshots do not enter entity attributes or Recorder history.
 
-The snapshot includes all standards and room variants, device bindings, brightness preferences, temporary values and recovery scopes. An envelope contains `state_json` plus a SHA-256 of those exact UTF-8 bytes. HA validates it, saves it through its atomic Store, then acknowledges the exact owner/instance/sequence/checksum. Corrupt, stale and duplicate snapshots cannot overwrite a newer backup; duplicates are acknowledged without another disk write. HA retains the latest snapshot and the previous five standard revisions, as well as the legacy migration copy. They are included in ordinary HA backups.
+The snapshot includes all standards and room variants, device bindings, brightness preferences, temporary values and recovery scopes. An envelope contains `state_json` plus a SHA-256 of those exact UTF-8 bytes. HA validates it, saves it through its atomic Store, then acknowledges the exact owner/instance/sequence/checksum. Corrupt, stale and duplicate snapshots cannot overwrite a newer backup; duplicates are acknowledged without another disk write. HA retains the latest snapshot and the previous five standard revisions. They are included in ordinary HA backups.
+
+The former HA migration document/journal is retained only until the migrated TV backup is validated and saved. Version 0.4.2 also removes that obsolete copy from completed migrations on upgrade, including while the TV is offline. An unfinished migration keeps its source data; a failed save does not discard it. Current backups and standard revision history are preserved.
 
 **Download backup** exports the complete envelope, including temporary adjustments for inspection. Importing it restores standards/preferences and queues native verification, rather than replaying historical temporary adjustments. Backups can be downloaded while the TV is off. Edits require an available TV because there is only one authority.
 
@@ -45,7 +47,7 @@ The backup is complete for **managed picture profiles**, not a firmware or whole
 - `restore_standard`: reset `active` or `all` managed banks on the TV.
 - `save_standard`: explicitly promote tracked `active` or `all` adjustments.
 - `reconcile`: ask the TV to retry pending recovery/environment work.
-- `preview`: a compact status summary and tracked temporary differences against effective room/brightness standards. Includes inactive-profile adjustments and pending-restore counts. It reads the bridge’s cached state, or labels the saved snapshot when offline; it does not audit all native settings. Use the exports for the full collection or backup.
+- `preview`: the complete cached profile state, including standards, brightness preferences, temporary adjustments, recovery scopes and bridge status. While offline it returns the saved snapshot with an explicit offline status. It does not audit all native settings, change profiles or add a stored copy. Version 0.4.2 restores this full view after 0.4.1 briefly summarized it.
 
 Use the integration's **Configure** screen to rename it or change the sun/TV entities. The MQTT base is fixed per entry; add another entry for another TV. Never edit live `.storage` manually. Retired recipe/environment automations must remain removed so they do not compete with TV ownership; the bridge rejects legacy profile writes after initialization. HDMI icon commands and source/CEC/power automations continue independently.
 

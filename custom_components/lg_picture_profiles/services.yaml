@@ -62,8 +62,8 @@ reconcile:
       selector:
         text:
 preview:
-  name: Preview differences
-  description: Show a compact status summary and tracked temporary changes compared with the effective standards. Uses the saved snapshot while offline; it does not audit every native TV setting. Use Export standard profiles or Export complete profile backup for full data.
+  name: Preview profiles
+  description: Show the complete cached profile state, including standards, brightness preferences, temporary adjustments, recovery scopes and bridge status. Uses the saved snapshot with an offline status when the bridge is unavailable; it does not audit every native TV setting.
   fields:
     entry_id:
       name: Integration entry ID

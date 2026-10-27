@@ -20,7 +20,6 @@ from .const import (
     STORAGE_VERSION,
 )
 from .model import validate
-from .preview import summarize
 from .transport import BridgeTransport
 
 
@@ -35,7 +34,6 @@ class ProfileManager:
             "format": 2,
             "backup": None,
             "previous": [],
-            "legacy": None,
             "migration_complete": False,
         }
         self.snapshot: dict = {}
@@ -157,10 +155,16 @@ class ProfileManager:
                 self.saved.update(value)
                 if self.saved["backup"]:
                     self.snapshot = decode(self.saved["backup"])
+                    if self.saved["migration_complete"] and "legacy" in self.saved:
+                        saved = deepcopy(self.saved)
+                        saved.pop("legacy")
+                        await self.store.async_save(saved)
+                        self.saved = saved
             else:
                 if value.get("document"):
                     validate(value["document"])
-                # Keep the complete former HA document/journal as a rollback copy.
+                # Keep the former HA document/journal until a complete migrated
+                # TV backup has been validated and durably saved.
                 # The retired HA policy writer never runs during migration.
                 self.saved["legacy"] = value
                 await self.store.async_save(deepcopy(self.saved))
@@ -211,13 +215,17 @@ class ProfileManager:
             status = self.transport.manager_status
             if legacy and legacy.get("document") and not self.saved["migration_complete"]:
                 if status.get("configured"):
-                    if self.snapshot.get("migration_id") == self.entry.entry_id:
-                        self.saved["migration_complete"] = True
-                        await self.store.async_save(deepcopy(self.saved))
-                    elif self.snapshot:
-                        raise HomeAssistantError(
-                            "TV already has a profile collection; download the saved HA standards before choosing which collection to keep"
-                        )
+                    async with self._lock:
+                        if self.snapshot.get("migration_id") == self.entry.entry_id:
+                            saved = deepcopy(self.saved)
+                            saved["migration_complete"] = True
+                            saved.pop("legacy", None)
+                            await self.store.async_save(saved)
+                            self.saved = saved
+                        elif self.snapshot:
+                            raise HomeAssistantError(
+                                "TV already has a profile collection; download the saved HA standards before choosing which collection to keep"
+                            )
                 else:
                     prefs = {"movie_bright": 100, "movie_dark": 3, "game_sdr": 80}
                     await self.transport.async_command(
@@ -279,16 +287,20 @@ class ProfileManager:
                     if self._candidate is envelope:
                         self._candidate = None
                     return
-            if self.saved["backup"] and (
+            saved = deepcopy(self.saved)
+            if saved["backup"] and (
                 state["revision"] != current.get("revision")
                 or state["owner_id"] != current.get("owner_id")
             ):
-                self.saved["previous"] = (self.saved["previous"] + [self.saved["backup"]])[-5:]
-            self.saved["backup"] = deepcopy(envelope)
-            if state.get("migration_id") == self.entry.entry_id or not self.saved.get("legacy"):
-                self.saved["migration_complete"] = True
+                saved["previous"] = (saved["previous"] + [saved["backup"]])[-5:]
+            saved["backup"] = deepcopy(envelope)
+            if state.get("migration_id") == self.entry.entry_id or not saved.get("legacy"):
+                saved["migration_complete"] = True
+            if saved["migration_complete"]:
+                saved.pop("legacy", None)
             # The ack means HA committed the whole snapshot, not merely received it.
-            await self.store.async_save(deepcopy(self.saved))
+            await self.store.async_save(saved)
+            self.saved = saved
             self.snapshot = state
             await self.transport.async_ack_backup(state, envelope["sha256"])
             if self._candidate is envelope:
@@ -349,15 +361,7 @@ class ProfileManager:
         return await self.async_rpc("reconcile")
 
     async def async_preview(self):
-        return summarize(
-            await self.async_snapshot(),
-            available=self.available,
-            backup_saved=bool(self.saved["backup"]),
-            error=self.last_error,
-        )
-
-    async def async_snapshot(self):
-        """Full editor state; the public preview action is intentionally smaller."""
+        """Full cached profile state for both the preview action and editor."""
         if self.available:
             return await self.async_rpc("get")
         state = deepcopy(self.snapshot)
