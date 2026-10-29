@@ -6,7 +6,7 @@ Home Assistant controls and complete backups for the **TV-owned** profile manage
 
 1. Add `andrew-kennedy/home-assistant-lg-picture-profiles` in HACS as an Integration, download, then restart Home Assistant.
 2. Add **LG Picture Profiles** in Devices & services. The complete UI flow asks for the existing bridge MQTT base topic, TV entity and sun entity. The integration creates its own three SDR brightness sliders; no input_number helpers are required.
-3. Open **LG Picture Profiles** in the sidebar (admin access), or **Picture profiles** in the TV app. Both use the same editor. Import a verified schema 1 standard document or complete JSON backup while the TV is on.
+3. Open **LG Picture Profiles** in the sidebar (admin access), or **Picture profiles** in the TV app. Both use the same editor. File import/download controls are available in the Home Assistant panel on a phone or computer; the TV app omits them. Import a verified schema 1 standard document or complete JSON backup through the HA panel while the TV is on.
 
 Upgrading from 0.3 removes the retired helper bindings from both setup data and options. Existing TV standards, brightness preferences, temporary adjustments and complete backups remain unchanged. Move any dashboards or automations from the old helpers to the integration’s number entities, then delete helpers you no longer need; the integration does not delete unrelated user-owned entities.
 
