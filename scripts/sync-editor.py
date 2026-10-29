@@ -1,16 +1,18 @@
 """Vendor the shared editor from a local LG Picture Bridge checkout."""
 
+import json
 import sys
 from hashlib import sha256
 from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]
 bridge = Path(sys.argv[1]) if len(sys.argv) > 1 else root.parent / "lg-webos-picture-bridge"
-source = (bridge / "app/profile-editor.js").read_bytes()
 target = root / "custom_components/lg_picture_profiles/frontend"
-(target / "profile-editor.js").write_bytes(source)
+files = {}
+for name in ("profile-view.js", "profile-editor.js"):
+    source = (bridge / "app" / name).read_bytes()
+    (target / name).write_bytes(source)
+    files[name] = {"path": "app/" + name, "sha256": sha256(source).hexdigest()}
 (target / "editor-source.json").write_text(
-    '{"repository":"andrew-kennedy/lg-webos-picture-bridge","path":"app/profile-editor.js","sha256":"'
-    + sha256(source).hexdigest()
-    + '"}\n'
+    json.dumps({"repository": "andrew-kennedy/lg-webos-picture-bridge", "files": files}) + "\n"
 )

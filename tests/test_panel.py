@@ -56,6 +56,8 @@ async def test_editor_export_offline_and_explicit_revision(manager):
 def test_vendored_editor_has_recorded_digest():
     root = Path(__file__).parents[1] / "custom_components/lg_picture_profiles/frontend"
     metadata = json.loads((root / "editor-source.json").read_text())
-    assert (
-        hashlib.sha256((root / "profile-editor.js").read_bytes()).hexdigest() == metadata["sha256"]
-    )
+    assert set(metadata["files"]) == {"profile-view.js", "profile-editor.js"}
+    for name, source in metadata["files"].items():
+        assert hashlib.sha256((root / name).read_bytes()).hexdigest() == source["sha256"]
+    panel = (root / "panel.js").read_text()
+    assert panel.index("import './profile-view.js") < panel.index("import './profile-editor.js")
