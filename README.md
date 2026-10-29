@@ -15,6 +15,7 @@ If upgrading an older helper-based 0.1/0.2 setup, first install 0.3.2 and turn o
 ## Daily use
 
 - Choose a device, native profile and room variant in the editor. Inactive native profiles can be edited without selecting their HDMI input. **Save standard** commits a draft; **Restore this profile** resets that bank; **Keep current adjustments** promotes its tracked temporary values.
+- **Automatic profiles: On/Off** controls day/night application and tracking/restoration of temporary adjustments. Off pauses those features and leaves the current TV settings in place. The TV editor supports arrow navigation, OK to edit a value, and OK or Back to finish editing; browser controls in the HA panel retain their usual keyboard and pointer behavior.
 - Existing picture/Game Optimizer MQTT entities remain temporary controls. LG remote changes to managed settings are tracked by the same existing native subscriptions, even when HA is down.
 - Standards live on the TV. Only explicit save/import/editor actions change them. A confirmed TV power cycle restores temporary changes; a bridge restart, HA restart, unknown/unavailable state, or format transition does not end a session.
 - Native input/range/ALLM mappings select movie and game presets. No source-based picture reapplication is added. Apple TV and Shield share a standard where they share an LG bank; the editor labels this.
