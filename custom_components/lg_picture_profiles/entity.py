@@ -1,9 +1,7 @@
 """Common device and subscription lifecycle for companion entities."""
 
 from homeassistant.core import callback
-from homeassistant.helpers.entity import DeviceInfo, Entity
-
-from .const import DOMAIN
+from homeassistant.helpers.entity import Entity
 
 
 class ProfileEntity(Entity):
@@ -13,12 +11,9 @@ class ProfileEntity(Entity):
     def __init__(self, entry, key: str) -> None:
         self.manager = entry.runtime_data
         self._attr_unique_id = f"{entry.entry_id}_{key}"
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, entry.entry_id)},
-            name=entry.title,
-            manufacturer="LG Picture Profiles",
-            model="LG Picture Bridge companion",
-        )
+        # A companion links to the bridge's device; it must not register a
+        # second device or move the MQTT entities into this config entry.
+        self.device_entry = self.manager.devices.device if self.manager.devices else None
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()

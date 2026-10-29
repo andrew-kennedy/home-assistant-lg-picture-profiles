@@ -19,15 +19,11 @@ class BridgeTransport:
         hass: HomeAssistant,
         base: str,
         changed: Callable,
-        settings: Callable,
-        observations: Callable | None = None,
         backup: Callable | None = None,
     ) -> None:
         self.hass = hass
         self.base = base
         self.changed = changed
-        self.settings = settings
-        self.observations = observations
         self.backup = backup
         self.manager_status: dict = {}
         self.api_version = 1
@@ -41,8 +37,6 @@ class BridgeTransport:
         for suffix, handler in [
             ("/profiles/status", self._status),
             ("/availability", self._availability),
-            ("/settings/status", self._settings),
-            ("/settings/observations", self._observations),
             ("/profiles/backup", self._backup),
         ]:
             self._unsub.append(
@@ -98,36 +92,9 @@ class BridgeTransport:
                     )
         self.changed()
 
-    @callback
-    def _settings(self, message) -> None:
-        if message.retain:
-            return
-        try:
-            status = json.loads(message.payload)
-        except ValueError, TypeError:
-            return
-        if isinstance(status, dict):
-            self.settings(status)
-
     @property
     def available(self) -> bool:
         return self.online and self.ready and self.session is not None
-
-    @callback
-    def _observations(self, message) -> None:
-        if message.retain or not self.observations or len(message.payload) > 200000:
-            return
-        try:
-            payload = json.loads(message.payload)
-        except ValueError, TypeError:
-            return
-        if (
-            isinstance(payload, dict)
-            and payload.get("protocol") == 1
-            and isinstance(payload.get("observations"), list)
-            and len(payload["observations"]) <= 128
-        ):
-            self.observations(payload["observations"])
 
     @callback
     def _backup(self, message) -> None:

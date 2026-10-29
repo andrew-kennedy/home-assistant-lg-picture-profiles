@@ -12,6 +12,14 @@ Upgrading from 0.3 removes the retired helper bindings from both setup data and 
 
 If upgrading an older helper-based 0.1/0.2 setup, first install 0.3.2 and turn on the updated bridge to complete TV ownership migration. That version preserves the former HA Store and transfers helper values to the TV. The 0.4 upgrade checks the saved complete backup before discarding active helper bindings, preventing an unfinished migration from losing those values. A TV that already owns a collection is never overwritten automatically.
 
+## Entity ownership and organization
+
+The bridge publishes individual picture settings, CEC controls and signal sensors through Home Assistant's built-in MQTT discovery. This keeps supported options, numeric limits, availability and confirmed state defined by the TV. Those controls work without this companion. The companion creates only profile-specific controls and provides the editor, environment context and complete backups; it also communicates over MQTT.
+
+Starting in 0.4.5, the companion's eight entities link to the existing MQTT bridge device, so both sets of controls appear on its device page. They retain their integration ownership, unique IDs, entity IDs and entity customizations. The obsolete companion-only device is removed through Home Assistant's supported helper migration API. Entity-based automations and dashboards continue to work; any references to the former companion **device ID** should instead target the bridge device or the individual entities.
+
+Linking uses the exact MQTT device identifier from the configured bridge topic. Late discovery or device recreation is handled by one device-registry listener; there is no polling. The companion never takes over or rewrites MQTT entity definitions or device metadata. It subscribes only to profile status, availability and complete backups, not the raw settings streams.
+
 ## Daily use
 
 - Choose a device, profile and room variant in the editor, such as **PC → SDR Game**. Picture and Motion appear together as sections; **All devices** only filters the list. Inactive native profiles can be edited without selecting their HDMI input. **Save standard** commits a draft; **Restore this profile** resets every section of the selected profile; **Keep current adjustments** promotes their tracked temporary values. Saving writes only edited sections. If a section fails, unconfirmed drafts remain available to review and retry.

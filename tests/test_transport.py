@@ -1,7 +1,7 @@
 import asyncio
 import json
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from homeassistant.exceptions import HomeAssistantError
@@ -17,7 +17,7 @@ def message(value, retain=False):
 @pytest.fixture
 async def transport():
     result = BridgeTransport(
-        SimpleNamespace(loop=asyncio.get_running_loop()), "lg/test", lambda: None, lambda _: None
+        SimpleNamespace(loop=asyncio.get_running_loop()), "lg/test", lambda: None
     )
     result._availability(SimpleNamespace(payload="online"))
     result._status(message({"protocol": 1, "session_id": "session-a", "ready": True}))
@@ -121,20 +121,16 @@ async def test_exhausted_timeout_leaves_no_pending_future(transport, monkeypatch
     assert not transport._pending
 
 
-async def test_only_bounded_live_observations_are_delivered(transport):
-    received = []
-    transport.observations = received.append
-    payload = {"protocol": 1, "observations": [{"key": "color", "value": 55}]}
-    transport._observations(message(payload, retain=True))
-    for invalid in [
-        None,
-        [],
-        {},
-        {**payload, "protocol": 2},
-        {**payload, "observations": [{}] * 129},
-    ]:
-        transport._observations(message(invalid))
-    transport._observations(SimpleNamespace(payload="bad json", retain=False))
-    assert not received
-    transport._observations(message(payload))
-    assert received == [payload["observations"]]
+async def test_companion_subscribes_only_to_profile_protocol(transport, monkeypatch):
+    unsubs = [Mock(), Mock(), Mock()]
+    subscribe = AsyncMock(side_effect=unsubs)
+    monkeypatch.setattr(module.mqtt, "async_subscribe", subscribe)
+    await transport.async_start()
+    assert [call.args[1] for call in subscribe.call_args_list] == [
+        "lg/test/profiles/status",
+        "lg/test/availability",
+        "lg/test/profiles/backup",
+    ]
+    await transport.async_stop()
+    for unsub in unsubs:
+        unsub.assert_called_once_with()

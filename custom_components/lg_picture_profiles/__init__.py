@@ -15,6 +15,7 @@ from homeassistant.helpers.storage import Store
 from . import panel
 from .backup import decode
 from .const import DOMAIN, PLATFORMS, STORAGE_VERSION
+from .device_link import BridgeDeviceLink
 from .manager import ProfileManager
 from .model import ProfileError
 
@@ -65,7 +66,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: LGProfilesEntry) -> bool
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = manager
     try:
         await manager.async_start()
+        manager.devices = BridgeDeviceLink(hass, entry)
+        manager.devices.async_start()
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+        manager.devices.async_sync()
         await panel.async_register(hass, entry)
     except Exception:
         await manager.async_stop()

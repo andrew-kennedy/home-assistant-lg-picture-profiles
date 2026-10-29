@@ -49,11 +49,11 @@ class ProfileManager:
         self._connection = None
         self._sync_task = None
         self._sync_again = False
+        self.devices = None
         self.transport = transport or BridgeTransport(
             hass,
             self.config[CONF_BRIDGE_TOPIC],
             self._bridge_changed,
-            lambda _: None,
             backup=self._receive_backup,
         )
 
@@ -378,6 +378,8 @@ class ProfileManager:
 
     async def async_stop(self):
         self._stopping = True
+        if self.devices:
+            self.devices.async_stop()
         if self._unsub:
             self._unsub()
         if self._sync_task:
