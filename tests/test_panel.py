@@ -61,3 +61,35 @@ def test_vendored_editor_has_recorded_digest():
         assert hashlib.sha256((root / name).read_bytes()).hexdigest() == source["sha256"]
     panel = (root / "panel.js").read_text()
     assert panel.index("import './profile-view.js") < panel.index("import './profile-editor.js")
+
+
+async def test_editor_forwards_atomic_batch_and_exact_selection(manager):
+    manager.hass.data["lg_picture_profiles"] = {"test": manager}
+    await manager._accept_backup(backup())
+    manager.transport.available = True
+    connection = SimpleNamespace(
+        user=SimpleNamespace(is_admin=True), send_result=Mock(), send_error=Mock()
+    )
+    for command in [
+        {
+            "action": "edit_many",
+            "revision": 4,
+            "edits": [{"bank_id": "movie", "variant": "dark", "settings": {"realCinema": "on"}}],
+            "preferences": {"movie_dark": 3},
+        },
+        {
+            "action": "save",
+            "revision": 5,
+            "room": "dark",
+            "selection": {"movie": ["realCinema"]},
+            "expected": {"movie": {"realCinema": "on"}},
+        },
+    ]:
+        editor_command(
+            manager.hass, connection, {"id": 4, "entry_id": "test", "command": command}
+        )
+        await asyncio.sleep(0)
+        assert manager.transport.calls[-1] == (
+            command["action"], {k: v for k, v in command.items() if k != "action"}
+        )
+    connection.send_error.assert_not_called()

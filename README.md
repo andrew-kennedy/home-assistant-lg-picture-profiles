@@ -1,6 +1,6 @@
 # LG Picture Profiles
 
-Home Assistant controls and complete backups for the **TV-owned** profile manager in [LG Picture Bridge](https://github.com/andrew-kennedy/lg-webos-picture-bridge). Requires bridge **0.13.2+**, rooted LG G6/webOS 11 and Home Assistant **2026.10+**. The TV is the single owner of standards and restoration; this integration performs no native picture-policy writes.
+Home Assistant controls and complete backups for the **TV-owned** profile manager in [LG Picture Bridge](https://github.com/andrew-kennedy/lg-webos-picture-bridge). Requires bridge **0.14.0+** for the editor, rooted LG G6/webOS 11 and Home Assistant **2026.10+**. The TV is the single owner of standards and restoration; this integration performs no native picture-policy writes.
 
 ## Install or upgrade
 
@@ -22,20 +22,22 @@ Linking uses the exact MQTT device identifier from the configured bridge topic. 
 
 ## Daily use
 
-- Choose a device, **SDR / HDR / Dolby Vision**, and room variant. Gaming devices with SDR/HDR standards have two format choices. Picture, distinct Game Optimizer controls and Motion appear together. Equivalent picture and gaming controls appear once, including normal/ALLM values; disagreements show **Mixed** until you explicitly choose a common value. Dolby Vision follows the room's saved Cinema/Cinema Home mapping. **All devices** only filters the list. Inactive profiles can be edited without selecting their HDMI input.
-- **Save standard** commits only changed values. **Restore this profile** resets its displayed settings and format-specific preset mappings; **Keep current adjustments** promotes their tracked temporary values. Other formats and HDMI-wide settings remain outside those actions. If an update fails, unconfirmed drafts remain available to review and retry. **View → HDMI port settings** exposes physical-port controls shared across all connected devices and formats. **Advanced picture settings** exposes the individual Picture, Game Optimizer, Motion and preset-selection values behind Picture profiles. An advanced edit affects only that group. The two detailed views do not overlap; every native setting remains accessible. Browsing does not change saved standards.
-- **Last TV read** is the selected profile's native value when opened or refreshed. For example, “on” means that setting is enabled. It does not indicate TV power or imply continuous polling. Bridge 0.13.8+ also supplies the correct refresh-rate boost label from TV metadata, including 165 Hz on the G6 despite LG's older internal key name.
-- **Automatic profiles: On/Off** controls day/night application and tracking/restoration of temporary adjustments. Off pauses those features and leaves the current TV settings in place. The TV editor supports arrow navigation, OK to edit a value, and OK or Back to finish editing; browser controls in the HA panel retain their usual keyboard and pointer behavior.
-- Existing picture/Game Optimizer MQTT entities remain temporary controls. LG remote changes to managed settings are tracked by the same existing native subscriptions, even when HA is down.
-- Standards live on the TV. Only explicit save/import/editor actions change them. A confirmed TV power cycle restores temporary changes; a bridge restart, HA restart, unknown/unavailable state, or format transition does not end a session.
-- Native input/range/ALLM mappings select movie and game presets. No source-based picture reapplication is added. Apple TV and Shield share a standard where they share an LG bank; the editor labels this.
-- The **Manage picture profiles**, **Restore standard**, **Save current adjustments as standard**, **Profile status** and **Temporary adjustments** entity IDs are preserved. Three new brightness numbers edit shared bright/dark movie SDR and game SDR standards, with bounds 0–100.
-- The three integration brightness sliders edit saved standards, while the raw MQTT picture controls make temporary adjustments. Retired input_number helpers are no longer read, synchronized or offered in setup/options.
-- HA sends sunrise/sunset room context through retained MQTT state. The TV applies only changed environment settings and respects temporary adjustments. During an HA outage, the last known room remains until reconnection.
+The editor requires **bridge 0.14.0+**. Older bridges remain read-only in the new editor while existing entities and backups continue working.
 
-**HDMI port settings versus picture profiles:** HDMI 3 has one set of port options (such as ALLM, VRR and QFT) shared by Apple TV, Shield and Switch. Picture values belong to the input and picture preset for each signal format; Apple TV and Shield share movie presets while Switch uses game presets. LG stores Game Optimizer values separately by input, signal-format/ALLM and game genre. The normal profile view combines matching controls for explicit edits; Advanced exposes each stored group. These are not independent profiles for every device name or simply two copies for an On/Off switch.
+- Select ports, formats and preset families. **More factors** adds exact presets, ALLM, configured game genres and the room variant. Choose **Picture**, **Motion**, **Gaming**, **HDMI connection** or **Preset selection**. Real Cinema is under Motion.
+- Use **Show separate controls by** to split selected settings by relevant factors. Removing a split combines them for a wider edit. Unequal standards show **Mixed** until explicitly edited. Browsing never applies settings or selects an HDMI input.
+- **Review changes** lists exact original targets and before/after values. Drafts survive filter and room changes, including drafts outside the current view. **Save standards** sends one validated batch and commits one TV standard revision. A conflict requires reviewing against the latest state; failed native application remains journaled for retry.
+- **Restore selected** and **Keep adjustments** preview exact keys in the current room. Restoring Motion can reset Real Cinema without altering Contrast in the same native bank. Keep promotes only reviewed temporary values; changed adjustments or room context require a fresh review.
+- Shared SDR brightness controls explicitly include all affected banks, even beyond selected ports. Movie brightness has Bright/Dark preferences; games have one shared SDR preference. The integration's three number entities edit these same standards. Raw MQTT setting entities make temporary adjustments.
+- **Last TV read** is the native value from opening/refreshing the view, including inactive inputs. Metadata is cached on demand; the editor adds no polling. Refresh-rate boost uses the TV's reported rate, including 165 Hz on the verified G6.
+- **Automatic profiles: On/Off** controls day/night application and temporary-adjustment tracking/restoration. Off leaves current TV settings in place. TV remote arrows move focus; OK edits values and opens controls; OK or Back finishes editing. Back leaves the review before leaving the editor.
+- Standards live on the TV. LG remote and MQTT edits to managed values remain temporary even when HA is offline. Confirmed standby/new boot schedules restoration; service restarts, disconnections and format changes do not end a viewing session.
+- HA supplies retained sunrise/sunset context. Native input/range/ALLM mappings still select movie and game presets. Apple TV and Shield share movie banks; HDMI 3 connection options also affect Switch. No source-based picture recipe is added.
+- Existing entity IDs, MQTT discovery ownership, complete backups and the three integration brightness sliders remain unchanged.
 
-Only keys defined in the collection are managed. Custom Game Optimizer genres need their own native-bank definitions. Unrelated accessibility, audio, panel calibration and energy settings are not added or learned. A remote-selected picture mode outside the curated collection can be tracked for restoration, but cannot be promoted as a supported standard.
+The editor's categories describe the controls, while grouping factors describe which stored values you want to edit together. LG's ordinary Picture values, including Real Cinema and TruMotion de-judder/de-blur, belong to an input and preset. Only `truMotionMode` also uses the HDMI app scope. Game Optimizer values use input, range/ALLM and genre. Port options span all formats. Expanding stored-value details exposes those exact targets; a broad edit updates existing targets once, without creating inheritance rules.
+
+Only keys defined in the collection are managed. New genres require corresponding native-bank definitions. Unrelated accessibility, audio, panel calibration and energy settings are not added or learned. Unconfigured remote-selected presets can be tracked for restoration but cannot be promoted as supported standards.
 
 ## Backups and recovery
 
@@ -98,7 +100,7 @@ banks:
     brightness_role: movie_sdr
 ```
 
-This illustrates the schema, not a complete calibration. Each native target appears once. Devices sharing a bank reference it; independent settings for Apple TV and Shield on the same LG bank would require source-based reapplication. PC picture inputs retain `_pc`; game controls use physical `gameInput` plus `dynamicRange` and `gameGenre`. Motion controls use a separate bank with `app_id: com.webos.app.hdmiN`. Mode mappings use `{input, dynamicRange}` and the `pictureMode` setting.
+This illustrates the schema, not a complete calibration. Each native target appears once. Devices sharing a bank reference it; independent settings for Apple TV and Shield on the same LG bank would require source-based reapplication. PC picture inputs retain `_pc`; game controls use physical `gameInput` plus `dynamicRange` and `gameGenre`. Only `truMotionMode` uses a separate bank with `app_id: com.webos.app.hdmiN`. Mode mappings use `{input, dynamicRange}` and the `pictureMode` setting.
 
 `brightness_role` is `movie_sdr` or `game_sdr`. Its effective brightness comes from the TV's shared preferences (bright/dark movie or game), exposed by the integration’s own number entities. Quote YAML strings such as `"off"` and `"on"`. Panel-specific white balance/CMS calibration is never copied automatically.
 

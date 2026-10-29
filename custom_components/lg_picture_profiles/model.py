@@ -24,7 +24,7 @@ PICTURE_KEYS = set(
     (
         "backlight contrast brightness color tint sharpness colorTemperature colorGamut gamma gammaLevel "
         "peakBrightness hdrDynamicToneMapping expressionEnhancer dynamicContrast dynamicColor superResolution "
-        "noiseReduction mpegNoiseReduction smoothGradation realCinema motionEyeCare motionProOLED "
+        "noiseReduction mpegNoiseReduction smoothGradation realCinema truMotionJudder truMotionBlur motionEyeCare motionProOLED "
         "aiHdrRemastering ambientLightCompensation filmmakerAmbientLight dolbyPrecisionDetail nearBlackDetail blackLevel"
     ).split()
 )
@@ -84,7 +84,7 @@ def allowed_keys(target: dict) -> set[str]:
             if "app_id" in target:
                 if target["app_id"] != "com.webos.app." + d["input"].removesuffix("_pc"):
                     raise ProfileError("Wrong HDMI app binding")
-                return {"truMotionMode", "truMotionJudder", "truMotionBlur"}
+                return {"truMotionMode"}
             return PICTURE_KEYS
         if (
             set(d) == {"input", "dynamicRange"}

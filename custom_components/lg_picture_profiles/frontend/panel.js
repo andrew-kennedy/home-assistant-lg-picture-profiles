@@ -1,5 +1,5 @@
-import './profile-view.js?v=0.4.9';
-import './profile-editor.js?v=0.4.9';
+import './profile-view.js?v=0.5.0';
+import './profile-editor.js?v=0.5.0';
 
 class LGPictureProfilesPanel extends HTMLElement {
   constructor() { super(); this.attachShadow({mode:'open'}); }

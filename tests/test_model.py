@@ -46,3 +46,20 @@ def test_exact_mode_and_range_identity():
     assert is_active(bank, {"input": "hdmi3", "mode": "hdrGame", "range": "hdrALLM"})
     assert not is_active(bank, {"input": "hdmi3", "mode": "game", "range": "sdrALLM"})
     assert not is_active(bank, {"input": "hdmi4", "mode": "hdrGame", "range": "hdrALLM"})
+
+
+def test_motion_controls_use_their_native_database_scope():
+    doc = document()
+    bank = doc["banks"][0]
+    bank["settings"].update({"realCinema": "on", "truMotionJudder": 0, "truMotionBlur": 0})
+    assert validate(doc) == doc
+    motion = deepcopy(bank)
+    motion.update({"id": "motion", "settings": {"truMotionMode": "off"}})
+    motion.pop("variants", None)
+    motion.pop("brightness_role", None)
+    motion["target"]["app_id"] = "com.webos.app.hdmi3"
+    doc["banks"].append(motion)
+    assert validate(doc) == doc
+    motion["settings"]["truMotionJudder"] = 0
+    with pytest.raises(ProfileError):
+        validate(doc)
