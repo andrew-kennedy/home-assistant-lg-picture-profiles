@@ -35,6 +35,10 @@ The editor requires **bridge 0.14.0+**. Older bridges remain read-only in the ne
 - HA supplies retained sunrise/sunset context. Native input/range/ALLM mappings still select movie and game presets. Apple TV and Shield share movie banks; HDMI 3 connection options also affect Switch. No source-based picture recipe is added.
 - Existing entity IDs, MQTT discovery ownership, complete backups and the three integration brightness sliders remain unchanged.
 
+**Preset family** is an editor grouping: **Gaming** contains the Game presets, while **Movies** contains Filmmaker, Cinema and Cinema Home. **Exact preset** means one LG picture mode, such as HDR Game, HDR Filmmaker or Dolby Vision Cinema. Each exact preset retains its own picture settings for an input. For example, Movies + Dolby Vision includes Cinema and Cinema Home; selecting the exact Cinema preset narrows that selection to one mode. Format (SDR/HDR/Dolby Vision) and room variant (Base/Bright/Dark) are separate factors.
+
+In **Show separate controls by**, Preset family separates Gaming from Movies, while Exact preset separates individual LG picture modes. Scope filters choose which settings to include; grouping factors choose which included values share a control.
+
 The editor's categories describe the controls, while grouping factors describe which stored values you want to edit together. LG's ordinary Picture values, including Real Cinema and TruMotion de-judder/de-blur, belong to an input and preset. Only `truMotionMode` also uses the HDMI app scope. Game Optimizer values use input, range/ALLM and genre. Port options span all formats. Expanding stored-value details exposes those exact targets; a broad edit updates existing targets once, without creating inheritance rules.
 
 Only keys defined in the collection are managed. New genres require corresponding native-bank definitions. Unrelated accessibility, audio, panel calibration and energy settings are not added or learned. Unconfigured remote-selected presets can be tracked for restoration but cannot be promoted as supported standards.
