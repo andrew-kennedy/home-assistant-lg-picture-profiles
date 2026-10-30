@@ -27,7 +27,7 @@ async def async_register(hass, entry):
         webcomponent_name="lg-picture-profiles-panel",
         sidebar_title=entry.title,
         sidebar_icon="mdi:television-shimmer",
-        module_url=ASSET_ROOT + "/panel.js?v=0.5.2",
+        module_url=ASSET_ROOT + "/panel.js?v=0.5.3",
         embed_iframe=False,
         require_admin=True,
         config={"entry_id": entry.entry_id, "title": entry.title},

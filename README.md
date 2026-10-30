@@ -24,6 +24,7 @@ Linking uses the exact MQTT device identifier from the configured bridge topic. 
 
 The editor requires **bridge 0.14.0+**. Older bridges remain read-only in the new editor while existing entities and backups continue working.
 
+- Short descriptions beneath setting names explain picture effects, processing tradeoffs and gaming controls. They are shared with the TV editor.
 - Select ports, formats and preset families. **More factors** adds exact presets, ALLM, configured game genres and the room variant. Choose **Picture**, **Motion**, **Gaming**, **HDMI connection** or **Preset selection**. Real Cinema is under Motion.
 - Use **Show separate controls by** to split selected settings by relevant factors. Removing a split combines them for a wider edit. Unequal standards show **Mixed** until explicitly edited. Browsing never applies settings or selects an HDMI input.
 - **Review changes** lists exact original targets and before/after values. Drafts survive filter and room changes, including drafts outside the current view. **Save standards** sends one validated batch and commits one TV standard revision. A conflict requires reviewing against the latest state; failed native application remains journaled for retry.
