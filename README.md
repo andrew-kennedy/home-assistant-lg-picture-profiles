@@ -24,7 +24,7 @@ Linking uses the exact MQTT device identifier from the configured bridge topic. 
 
 The editor requires **bridge 0.14.0+**. Older bridges remain read-only in the new editor while existing entities and backups continue working.
 
-- Short descriptions beneath setting names explain picture effects, processing tradeoffs and gaming controls. They are shared with the TV editor.
+- Short descriptions beneath setting names explain picture effects, processing tradeoffs and gaming controls. They are shared with the TV editor. Mode-specific caveats distinguish saved values from effective processing. The G6’s `dolbyHdrCinema` preset is labeled **Dolby Vision Filmmaker**, matching LG’s UI.
 - Select ports, formats and preset families. **More factors** adds exact presets, ALLM, configured game genres and the room variant. Choose **Picture**, **Motion**, **Gaming**, **HDMI connection** or **Preset selection**. Real Cinema is under Motion.
 - Use **Show separate controls by** to split selected settings by relevant factors. Removing a split combines them for a wider edit. Unequal standards show **Mixed** until explicitly edited. Browsing never applies settings or selects an HDMI input.
 - **Review changes** lists exact original targets and before/after values. Drafts survive filter and room changes, including drafts outside the current view. **Save standards** sends one validated batch and commits one TV standard revision. A conflict requires reviewing against the latest state; failed native application remains journaled for retry.
@@ -36,7 +36,7 @@ The editor requires **bridge 0.14.0+**. Older bridges remain read-only in the ne
 - HA supplies retained sunrise/sunset context. Native input/range/ALLM mappings still select movie and game presets. Apple TV and Shield share movie banks; HDMI 3 connection options also affect Switch. No source-based picture recipe is added.
 - Existing entity IDs, MQTT discovery ownership, complete backups and the three integration brightness sliders remain unchanged.
 
-**Preset family** is an editor grouping: **Gaming** contains the Game presets, while **Movies** contains Filmmaker, Cinema and Cinema Home. **Exact preset** means one LG picture mode, such as HDR Game, HDR Filmmaker or Dolby Vision Cinema. Each exact preset retains its own picture settings for an input. For example, Movies + Dolby Vision includes Cinema and Cinema Home; selecting the exact Cinema preset narrows that selection to one mode. Format (SDR/HDR/Dolby Vision) and room variant (Base/Bright/Dark) are separate factors.
+**Preset family** is an editor grouping: **Gaming** contains the Game presets, while **Movies** contains Filmmaker and Cinema Home. **Exact preset** means one LG picture mode, such as HDR Game, HDR Filmmaker or Dolby Vision Filmmaker. Each exact preset retains its own picture settings for an input. For example, Movies + Dolby Vision includes Filmmaker and Cinema Home; selecting the exact Filmmaker preset narrows that selection to one mode. Format (SDR/HDR/Dolby Vision) and room variant (Base/Bright/Dark) are separate factors.
 
 In **Show separate controls by**, Preset family separates Gaming from Movies, while Exact preset separates individual LG picture modes. Scope filters choose which settings to include; grouping factors choose which included values share a control.
 
