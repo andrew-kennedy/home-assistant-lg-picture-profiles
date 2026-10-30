@@ -1,6 +1,6 @@
 # LG Picture Profiles
 
-Home Assistant controls and complete backups for the **TV-owned** profile manager in [LG Picture Bridge](https://github.com/andrew-kennedy/lg-webos-picture-bridge). Requires bridge **0.14.0+** for the editor, rooted LG G6/webOS 11 and Home Assistant **2026.10+**. The TV is the single owner of standards and restoration; this integration performs no native picture-policy writes.
+Home Assistant controls and complete backups for the **TV-owned** profile manager in [LG Picture Bridge](https://github.com/andrew-kennedy/lg-webos-picture-bridge). Requires bridge **0.15.0+** for the editor, rooted LG G6/webOS 11 and Home Assistant **2026.10+**. The TV is the single owner of standards and restoration; this integration performs no native picture-policy writes.
 
 ## Install or upgrade
 
@@ -22,11 +22,12 @@ Linking uses the exact MQTT device identifier from the configured bridge topic. 
 
 ## Daily use
 
-The editor requires **bridge 0.14.0+**. Older bridges remain read-only in the new editor while existing entities and backups continue working.
+The editor requires **bridge 0.15.0+**. Older bridges remain read-only in the new editor while existing entities and backups continue working.
 
 - Short descriptions beneath setting names explain picture effects, processing tradeoffs and gaming controls. They are shared with the TV editor. Mode-specific caveats distinguish saved values from effective processing. The G6’s `dolbyHdrCinema` preset is labeled **Dolby Vision Filmmaker**, matching LG’s UI.
 - Select ports, formats and preset families. **More factors** adds exact presets, ALLM, configured game genres and the room variant. Choose **Picture**, **Motion**, **Gaming**, **HDMI connection** or **Preset selection**. Real Cinema is under Motion.
 - Use **Show separate controls by** to split selected settings by relevant factors. Removing a split combines them for a wider edit. Unequal standards show **Mixed** until explicitly edited. Browsing never applies settings or selects an HDMI input.
+- Only verified applicable controls are editable. Game presets use their Game Optimizer sliders; unused ordinary sliders are excluded. Gamma, tone-mapping choices and other controls respect their target preset. A collapsed list explains unavailable or unverified values, which remain preserved in backups. Combined edits include only applicable targets, and the TV rechecks every target before saving.
 - **Review changes** lists exact original targets and before/after values. Drafts survive filter and room changes, including drafts outside the current view. **Save standards** sends one validated batch and commits one TV standard revision. A conflict requires reviewing against the latest state; failed native application remains journaled for retry.
 - **Restore selected** and **Keep adjustments** preview exact keys in the current room. Restoring Motion can reset Real Cinema without altering Contrast in the same native bank. Keep promotes only reviewed temporary values; changed adjustments or room context require a fresh review.
 - OLED pixel brightness appears together for SDR, HDR and Dolby Vision; HDR and Dolby Vision remain editable per profile. Shared SDR brightness controls explicitly include all affected banks, even beyond selected ports. Movie brightness has Bright/Dark preferences; games have one shared SDR preference. The integration's three number entities edit these same standards. Raw MQTT setting entities make temporary adjustments.
