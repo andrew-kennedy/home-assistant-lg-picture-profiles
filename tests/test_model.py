@@ -22,6 +22,30 @@ def test_round_trip_and_shared_device_binding():
     assert not equal(True, 1)
 
 
+def test_expanded_native_catalog_and_signal_validation():
+    doc = document()
+    presets = ["game", "filmMaker", "normal", "vivid", "cinema", "expert1", "expert2",
+               "hdrGame", "hdrFilmMaker", "hdrCinemaBright", "hdrStandard", "hdrVivid",
+               "dolbyHdrGame", "dolbyHdrCinema", "dolbyHdrCinemaBright", "dolbyHdrStandard"]
+    doc["banks"] = [
+        {"id": f"native_{port}_{pc}_{mode}", "name": mode, "devices": [],
+         "target": {"category": "picture", "dimension": {
+             "input": f"hdmi{port}" + ("_pc" if pc else ""), "pictureMode": mode}},
+         "settings": {"backlight": 50}}
+        for port in range(1, 5) for pc in (False, True) for mode in presets
+    ]
+    assert len(doc["banks"]) == 128
+    assert validate(doc) == doc
+    mapping = {"id": "mapping", "name": "HDR mapping", "devices": [],
+               "target": {"category": "picture", "dimension": {"input": "hdmi3", "dynamicRange": "hdr"}},
+               "settings": {"pictureMode": "hdrCinemaBright"}}
+    doc["banks"].append(mapping)
+    assert validate(doc) == doc
+    mapping["settings"]["pictureMode"] = "expert1"
+    with pytest.raises(ProfileError, match="signal range"):
+        validate(doc)
+
+
 @pytest.mark.parametrize(
     "change",
     [

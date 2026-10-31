@@ -18,6 +18,9 @@ PRESETS = {
     "dolbyHdrGame",
     "dolbyHdrCinema",
     "dolbyHdrCinemaBright",
+    "normal", "vivid", "cinema", "expert1", "expert2", "eco", "personalized", "sports", "photo",
+    "hdrStandard", "hdrVivid", "hdrCinema", "hdrCinemaBright", "hdrEco", "hdrPersonalized",
+    "dolbyHdrStandard", "dolbyHdrVivid", "dolbyHdrPersonalized",
 }
 RANGES = {"sdr", "sdrALLM", "hdr", "hdrALLM", "dolbyHdr", "dolbyHdrALLM"}
 PICTURE_KEYS = set(
@@ -189,7 +192,7 @@ def validate(document: dict) -> dict:
         raise ProfileError("Devices must map stable IDs to display names")
     banks = document.get("banks")
     if not isinstance(banks, list) or not 1 <= len(banks) <= MAX_BANKS:
-        raise ProfileError("Expected 1–100 saved banks")
+        raise ProfileError("Expected 1–768 saved banks")
     seen_ids, seen_targets = set(), set()
     for bank in banks:
         if not isinstance(bank, dict) or set(bank) - {
@@ -241,12 +244,12 @@ def validate(document: dict) -> dict:
             for key, value in values.items():
                 if key == "pictureMode":
                     signal = bank["target"]["dimension"]["dynamicRange"].removesuffix("ALLM")
-                    modes = {
-                        "sdr": {"filmMaker", "game"},
-                        "hdr": {"hdrFilmMaker", "hdrGame"},
-                        "dolbyHdr": {"dolbyHdrCinema", "dolbyHdrCinemaBright", "dolbyHdrGame"},
-                    }
-                    if not isinstance(value, str) or value not in modes[signal]:
+                    mode_format = (
+                        "dolbyHdr" if isinstance(value, str) and value.startswith("dolbyHdr")
+                        else "hdr" if isinstance(value, str) and value.startswith("hdr")
+                        else "sdr"
+                    )
+                    if not isinstance(value, str) or value not in PRESETS or mode_format != signal:
                         raise ProfileError(
                             "Picture mode must be a supported preset for its signal range"
                         )
@@ -264,7 +267,7 @@ def validate(document: dict) -> dict:
         if role not in (None, "movie_sdr", "game_sdr") or (role and "backlight" not in settings):
             raise ProfileError("Brightness roles require an OLED brightness setting")
     # Reject NaN/Infinity as well as oversized documents.
-    if len(json.dumps(document, allow_nan=False)) > 200000:
+    if len(json.dumps(document, allow_nan=False)) > 500000:
         raise ProfileError("Profile document is too large")
     return deepcopy(document)
 
@@ -301,6 +304,8 @@ def is_active(bank: dict, context: dict) -> bool:
     # Only one Game Optimizer genre is active. Obtain it from the scoped change,
     # rather than assuming all genre banks belong to the current view.
     if "gameGenre" in d and d["gameGenre"] != context.get("gameGenre", "Standard"):
+        return False
+    if "gameGenre" in d and not str(context.get("mode", "")).lower().endswith("game"):
         return False
     return True
 
