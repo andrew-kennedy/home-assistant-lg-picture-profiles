@@ -1,6 +1,6 @@
 # LG Picture Profiles
 
-Version **0.11.0** shares bridge **0.20.0**’s simplified editor: **Edit Base** is the default, **Edit profile** edits named overrides, and each override has an **Edit Base** shortcut. The review explicitly identifies the save destination and which profiles follow a Base change. Selection and grouping move behind an **Applies to** summary, with viewing-profile activation and automatic bindings in their own section.
+Version **0.11.1** shares bridge **0.20.1**’s simplified editor: **Edit Base** is the default, **Edit profile** edits named overrides, and each override has an **Edit Base** shortcut. The review explicitly identifies the save destination and which profiles follow a Base change. Selection and grouping move behind an **Applies to** summary, with viewing-profile activation and automatic bindings in their own section.
 
 Version **0.10.0** supports bridge **0.19.0**’s native settings browser. Browsing does not enroll settings; direct Base edits save to LG, while named overrides and brightness links retain only their required baseline keys. Complete native snapshots are backed up separately from managed standards. Their capture and update timestamps describe freshness; native backups remain in TV RAM and Home Assistant storage. Existing managed controls, entity IDs and automatic sunset bindings are preserved.
 
