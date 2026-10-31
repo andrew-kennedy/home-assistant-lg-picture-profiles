@@ -73,6 +73,18 @@ async def test_editor_forwards_atomic_batch_and_exact_selection(manager):
     for command in [
         {
             "action": "edit_many",
+            "revision": 7,
+            "edits": [
+                {
+                    "bank_id": "movie",
+                    "variant": "dark",
+                    "settings": {"color": 50},
+                    "inherit": ["backlight"],
+                }
+            ],
+        },
+        {
+            "action": "edit_many",
             "revision": 4,
             "edits": [{"bank_id": "movie", "variant": "dark", "settings": {"realCinema": "on"}}],
             "preferences": {"movie_dark": 3},

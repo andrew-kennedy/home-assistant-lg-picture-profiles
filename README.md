@@ -1,6 +1,6 @@
 # LG Picture Profiles
 
-Home Assistant controls and complete backups for the **TV-owned** profile manager in [LG Picture Bridge](https://github.com/andrew-kennedy/lg-webos-picture-bridge). Requires bridge **0.15.0+** for the editor (**0.17.0+** recommended for named profiles, brightness links and inactive motion editing), rooted LG G6/webOS 11 and Home Assistant **2026.10+**. The TV is the single owner of standards and restoration; this integration performs no native picture-policy writes.
+Home Assistant controls and complete backups for the **TV-owned** profile manager in [LG Picture Bridge](https://github.com/andrew-kennedy/lg-webos-picture-bridge). Requires bridge **0.15.0+** for the editor (**0.17.1+** recommended for named profiles, brightness links and inactive motion editing), rooted LG G6/webOS 11 and Home Assistant **2026.10+**. The TV is the single owner of standards and restoration; this integration performs no native picture-policy writes.
 
 ## Install or upgrade
 
@@ -51,7 +51,7 @@ Only keys defined in the collection are managed. New genres require correspondin
 
 ## Named profiles (0.8 / bridge 0.17)
 
-Choose **Profile to edit** in the editor, then use the existing port/format/preset filters to edit its values. **Manage profiles and automatic selection** lets you create, duplicate, rename, reset or delete profiles. New profiles inherit Base standards; only explicitly overridden values are stored separately. An inherited/override label explains each control. Reset returns a profile to all base values. Editing an inactive profile does not select it.
+Choose **Profile to edit** in the editor, then use the existing port/format/preset filters to edit its values. **Manage profiles and automatic selection** lets you create, duplicate, rename, reset or delete profiles. New profiles inherit Base standards; only explicitly overridden values are stored separately. **Show only overrides** hides inherited settings; explicit overrides that currently equal Base remain visible. **Use Base** beside a setting removes only its override and follows future Base changes. The review lists exact targets and each target’s own Base value; shared brightness includes every linked bank. Saves can combine override removals and ordinary edits in one transaction. Unused overrides can be cleaned up from the excluded list. Returning individual settings to Base requires bridge 0.17.1 (editor API 7). The profile-wide Reset returns the entire profile to base values. Editing an inactive profile does not select it.
 
 The new **Picture profile** entity lists Automatic, Base standard and all TV-created profiles, with no extra setup or polling. Select one to apply it and clear temporary adjustments. Manual selection persists across power cycles and sunsets. Select **Automatic** to follow the TV-owned bright/dark bindings; those automatic transitions preserve temporary adjustments. Management must be on for native application; a selection made while the bridge runs in standby is queued for power-on.
 
