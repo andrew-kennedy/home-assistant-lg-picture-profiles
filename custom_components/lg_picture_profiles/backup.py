@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+from datetime import datetime
 
 from .model import ProfileError, validate
 
@@ -30,6 +31,21 @@ def decode(envelope: dict) -> dict:
     ):
         raise ProfileError("Invalid backup identity")
     validate(state.get("document"))
+    native = state.get("native_snapshot")
+    if native is not None:
+        if not isinstance(native, dict) or set(native) != {"captured_at", "updated_at", "document"}:
+            raise ProfileError("Invalid native snapshot")
+        try:
+            for key in ("captured_at", "updated_at"):
+                datetime.fromisoformat(native[key])
+        except (ValueError, TypeError) as error:
+            raise ProfileError("Invalid native snapshot timestamp") from error
+        validate(native["document"])
+        if native["document"]["schema"] != 1 or any(
+            "variants" in bank or "brightness_role" in bank
+            for bank in native["document"]["banks"]
+        ):
+            raise ProfileError("Native snapshots contain values, not profile policy")
     if state["document"]["schema"] == 2:
         ids = {p["id"] for p in state["document"]["profiles"]} | {"standard"}
         if (

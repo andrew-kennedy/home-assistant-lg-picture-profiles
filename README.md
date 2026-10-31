@@ -1,5 +1,7 @@
 # LG Picture Profiles
 
+Version **0.10.0** supports bridge **0.19.0**’s native settings browser. Browsing does not enroll settings; direct Base edits save to LG, while named overrides and brightness links retain only their required baseline keys. Complete native snapshots are backed up separately from managed standards. Their capture and update timestamps describe freshness; native backups remain in TV RAM and Home Assistant storage. Existing managed controls, entity IDs and automatic sunset bindings are preserved.
+
 Home Assistant controls and complete backups for the **TV-owned** profile manager in [LG Picture Bridge](https://github.com/andrew-kennedy/lg-webos-picture-bridge). Requires bridge **0.15.0+** for the editor (**0.17.1+** recommended for named profiles, brightness links and inactive motion editing), rooted LG G6/webOS 11 and Home Assistant **2026.10+**. The TV is the single owner of standards and restoration; this integration performs no native picture-policy writes.
 
 ## Install or upgrade

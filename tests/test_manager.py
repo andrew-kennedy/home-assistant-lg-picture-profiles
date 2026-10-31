@@ -80,6 +80,30 @@ async def test_duplicate_ack_has_no_storage_write(manager):
     assert len(manager.transport.acks) == 2
 
 
+async def test_native_snapshot_is_backed_up_without_becoming_managed(manager):
+    native = document()
+    for bank in native["banks"]:
+        bank.pop("variants", None)
+        bank.pop("brightness_role", None)
+    extra = deepcopy(native["banks"][0])
+    extra["id"] = "unused_native"
+    extra["target"]["dimension"]["pictureMode"] = "expert1"
+    native["banks"].append(extra)
+    complete = backup(native_snapshot={
+        "document": native, "captured_at": "2026-10-31T10:00:00Z", "updated_at": "2026-10-31T10:00:00Z"
+    })
+    await manager._accept_backup(complete)
+    assert manager.document == document()
+    assert "unused_native" not in {b["id"] for b in manager.document["banks"]}
+    assert decode(await manager.async_export_backup())["native_snapshot"]["document"] == native
+    await manager._accept_backup(backup(sequence=2, native_snapshot=None))
+    assert manager.saved["previous"][-1] == complete, "Startup cannot discard the last complete native copy"
+    corrupt = deepcopy(native)
+    corrupt["banks"][0]["variants"] = {}
+    with pytest.raises(ProfileError, match="values, not profile policy"):
+        decode(backup(native_snapshot={"document": corrupt, "captured_at": "2026-10-31T10:00:00Z", "updated_at": "2026-10-31T10:00:00Z"}))
+
+
 async def test_corrupt_or_out_of_order_backup_cannot_replace_good_copy(manager):
     valid = backup(sequence=4)
     await manager._accept_backup(valid)

@@ -299,6 +299,7 @@ class ProfileManager:
             if saved["backup"] and (
                 state["revision"] != current.get("revision")
                 or state["owner_id"] != current.get("owner_id")
+                or current.get("native_snapshot") and not state.get("native_snapshot")
             ):
                 saved["previous"] = (saved["previous"] + [saved["backup"]])[-5:]
             saved["backup"] = deepcopy(envelope)

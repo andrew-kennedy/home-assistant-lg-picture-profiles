@@ -191,8 +191,8 @@ def validate(document: dict) -> dict:
     ):
         raise ProfileError("Devices must map stable IDs to display names")
     banks = document.get("banks")
-    if not isinstance(banks, list) or not 1 <= len(banks) <= MAX_BANKS:
-        raise ProfileError("Expected 1–768 saved banks")
+    if not isinstance(banks, list) or not (0 if document["schema"] == 2 else 1) <= len(banks) <= MAX_BANKS:
+        raise ProfileError("Expected up to 768 saved banks")
     seen_ids, seen_targets = set(), set()
     for bank in banks:
         if not isinstance(bank, dict) or set(bank) - {
