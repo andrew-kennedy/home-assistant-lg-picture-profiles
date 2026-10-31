@@ -96,6 +96,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: LGProfilesEntry) -> boo
             "export_profiles",
             "restore_standard",
             "save_standard",
+            "apply_profile",
             "reconcile",
             "preview",
             "export_backup",
@@ -150,6 +151,10 @@ def _register_services(hass: HomeAssistant) -> None:
                 )
             if call.service == "save_standard":
                 return await manager.async_save_standard(call.data.get("scope", "active"))
+            if call.service == "apply_profile":
+                return await manager.async_apply_profile(
+                    call.data["profile_id"], call.data["clear_adjustments"]
+                )
             if call.service == "preview":
                 return await manager.async_preview()
             return await manager.async_reconcile()
@@ -161,6 +166,7 @@ def _register_services(hass: HomeAssistant) -> None:
         "export_profiles",
         "restore_standard",
         "save_standard",
+        "apply_profile",
         "reconcile",
         "preview",
         "export_backup",
@@ -169,6 +175,9 @@ def _register_services(hass: HomeAssistant) -> None:
         fields = dict(base)
         if name == "import_profiles":
             fields.update({vol.Optional("document"): dict, vol.Optional("yaml"): str})
+        if name == "apply_profile":
+            fields[vol.Required("profile_id")] = str
+            fields[vol.Optional("clear_adjustments", default=True)] = bool
         if name == "restore_backup":
             fields[vol.Required("backup")] = dict
         if name == "export_backup":

@@ -85,11 +85,31 @@ async def test_editor_forwards_atomic_batch_and_exact_selection(manager):
             "expected": {"movie": {"realCinema": "on"}},
         },
     ]:
-        editor_command(
-            manager.hass, connection, {"id": 4, "entry_id": "test", "command": command}
-        )
+        editor_command(manager.hass, connection, {"id": 4, "entry_id": "test", "command": command})
         await asyncio.sleep(0)
         assert manager.transport.calls[-1] == (
-            command["action"], {k: v for k, v in command.items() if k != "action"}
+            command["action"],
+            {k: v for k, v in command.items() if k != "action"},
         )
+    connection.send_error.assert_not_called()
+
+
+async def test_editor_forwards_named_catalog_commands(manager):
+    manager.hass.data["lg_picture_profiles"] = {"test": manager}
+    connection = SimpleNamespace(
+        user=SimpleNamespace(is_admin=True), send_result=Mock(), send_error=Mock()
+    )
+    for action in (
+        "upgrade_profiles",
+        "create_profile",
+        "rename_profile",
+        "delete_profile",
+        "reset_profile",
+        "set_automatic",
+        "apply_profile",
+    ):
+        command = {"action": action, "revision": 7, "profile_id": "p_evening"}
+        editor_command(manager.hass, connection, {"id": 7, "entry_id": "test", "command": command})
+        await asyncio.sleep(0)
+        assert manager.transport.calls[-1] == (action, {"revision": 7, "profile_id": "p_evening"})
     connection.send_error.assert_not_called()

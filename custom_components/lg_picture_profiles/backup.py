@@ -30,6 +30,13 @@ def decode(envelope: dict) -> dict:
     ):
         raise ProfileError("Invalid backup identity")
     validate(state.get("document"))
+    if state["document"]["schema"] == 2:
+        ids = {p["id"] for p in state["document"]["profiles"]} | {"standard"}
+        if (
+            state.get("selection") not in ids | {"automatic"}
+            or state.get("active_profile") not in ids
+        ):
+            raise ProfileError("Invalid selected profile")
     prefs = state.get("preferences")
     if (
         not isinstance(prefs, dict)

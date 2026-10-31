@@ -27,7 +27,7 @@ async def async_register(hass, entry):
         webcomponent_name="lg-picture-profiles-panel",
         sidebar_title=entry.title,
         sidebar_icon="mdi:television-shimmer",
-        module_url=ASSET_ROOT + "/panel.js?v=0.7.0",
+        module_url=ASSET_ROOT + "/panel.js?v=0.8.0",
         embed_iframe=False,
         require_admin=True,
         config={"entry_id": entry.entry_id, "title": entry.title},
@@ -78,6 +78,13 @@ async def editor_command(hass, connection, message):
             "set_brightness",
             "set_brightness_links",
             "include_motion_controls",
+            "upgrade_profiles",
+            "create_profile",
+            "rename_profile",
+            "delete_profile",
+            "reset_profile",
+            "set_automatic",
+            "apply_profile",
         ):
             result = await manager.async_rpc(action, **command)
         else:

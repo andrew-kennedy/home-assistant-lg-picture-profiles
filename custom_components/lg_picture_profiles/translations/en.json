@@ -4,7 +4,7 @@
     "step": {
       "user": {
         "title": "Connect to LG Picture Bridge",
-        "description": "Requires LG Picture Bridge 0.13.2 or newer. Enter the MQTT base before /command. The TV owns profiles; Home Assistant provides brightness sliders, day/night context and complete backups. Setup works while the TV is off.",
+        "description": "Connect to LG Picture Bridge (0.17.0 recommended). The TV owns named picture profiles and their shared base standards. Home Assistant provides profile selection, sun context and complete backups. Enter the MQTT base before /command. Setup works while the TV is off.",
         "data": {
           "name": "Name",
           "bridge_topic": "Bridge MQTT base topic",
@@ -31,7 +31,7 @@
           "tv_entity": "LG TV media player",
           "sun_entity": "Sun entity"
         },
-        "description": "Edit saved brightness with this integration’s three SDR brightness sliders. No separate helpers are needed."
+        "description": "Manage named profiles and automatic bright/dark bindings in the sidebar editor. Select a profile with the Picture profile entity or the Apply picture profile action. No separate helpers are needed."
       }
     },
     "error": {

@@ -182,6 +182,8 @@ class ProfileManager:
             self.transport.session,
             manager.get("instance_id"),
             manager.get("configured"),
+            manager.get("profile_schema"),
+            manager.get("revision") if manager.get("profile_schema") == 1 else None,
         )
         if connection != self._connection:
             self._connection = connection
@@ -213,6 +215,12 @@ class ProfileManager:
                 await self.transport.async_publish_context(self.room)
             legacy = self.saved.get("legacy")
             status = self.transport.manager_status
+            if (
+                status.get("configured")
+                and status.get("editor_api", 0) >= 6
+                and status.get("profile_schema") == 1
+            ):
+                await self.async_rpc("upgrade_profiles", revision=self.revision)
             if legacy and legacy.get("document") and not self.saved["migration_complete"]:
                 if status.get("configured"):
                     async with self._lock:
@@ -358,6 +366,13 @@ class ProfileManager:
 
     async def async_enable(self, enabled):
         return await self.async_rpc("set_enabled", enabled=enabled)
+
+    async def async_apply_profile(self, profile_id, clear_adjustments=True):
+        if self.transport.manager_status.get("editor_api", 0) < 6:
+            raise HomeAssistantError("Update LG Picture Bridge to 0.17.0 for named profiles")
+        return await self.async_rpc(
+            "apply_profile", profile_id=profile_id, clear_adjustments=clear_adjustments
+        )
 
     async def async_set_brightness(self, role, value):
         if role not in BRIGHTNESS_ROLES or not float(value).is_integer() or not 0 <= value <= 100:

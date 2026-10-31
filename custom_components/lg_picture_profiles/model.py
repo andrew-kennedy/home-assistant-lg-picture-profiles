@@ -108,16 +108,75 @@ def allowed_keys(target: dict) -> set[str]:
     raise ProfileError("Unsupported saved-bank target")
 
 
+def validate_catalog(document: dict) -> set[str]:
+    """Validate named overlays while retaining the exact native bank identities."""
+    roles = {"game_sdr", "movie_sdr"}
+
+    def brightness(value, complete=False):
+        if (
+            not isinstance(value, dict)
+            or set(value) - roles
+            or complete
+            and set(value) != roles
+            or any(type(v) is not int or not 0 <= v <= 100 for v in value.values())
+        ):
+            raise ProfileError("Invalid shared profile brightness")
+
+    brightness(document.get("brightness"), True)
+    profiles = document.get("profiles")
+    if not isinstance(profiles, list) or len(profiles) > 32:
+        raise ProfileError("Expected up to 32 named profiles")
+    ids, names = set(), {"automatic", "base standard"}
+    for profile in profiles:
+        if not isinstance(profile, dict) or set(profile) - {"id", "name", "brightness"}:
+            raise ProfileError("Invalid named profile")
+        pid, name = profile.get("id"), profile.get("name")
+        if (
+            not isinstance(pid, str)
+            or not re.fullmatch(r"[a-z][a-z0-9_-]{0,63}", pid)
+            or pid in {"constructor", "prototype", "__proto__", "standard", "automatic"}
+            or pid in ids
+        ):
+            raise ProfileError("Profile IDs must be unique")
+        if (
+            not isinstance(name, str)
+            or not 1 <= len(name) <= 64
+            or name != name.strip()
+            or re.search(r"[\x00-\x1f\x7f]", name)
+            or name.lower() in names
+        ):
+            raise ProfileError("Choose a unique profile name")
+        brightness(profile.get("brightness", {}))
+        ids.add(pid)
+        names.add(name.lower())
+    automatic = document.get("automatic")
+    if (
+        not isinstance(automatic, dict)
+        or set(automatic) != {"bright", "dark"}
+        or any(not isinstance(v, str) or v not in ids | {"standard"} for v in automatic.values())
+    ):
+        raise ProfileError("Invalid automatic profile bindings")
+    return ids
+
+
 def validate(document: dict) -> dict:
     """Validate imported state before replacing the active standard."""
     if (
         not isinstance(document, dict)
-        or set(document) - {"schema", "name", "devices", "banks"}
-        or document.get("schema") != 1
+        or set(document)
+        - {
+            "schema",
+            "name",
+            "devices",
+            "banks",
+            *({"profiles", "brightness", "automatic"} if document.get("schema") == 2 else set()),
+        }
+        or document.get("schema") not in (1, 2)
     ):
-        raise ProfileError("Expected a schema 1 profile document")
+        raise ProfileError("Expected a schema 1 or 2 profile document")
     if not isinstance(document.get("name"), str) or not 1 <= len(document["name"]) <= 100:
         raise ProfileError("A profile collection name is required")
+    profile_ids = validate_catalog(document) if document["schema"] == 2 else set(ROOMS)
     devices = document.get("devices", {})
     if (
         not isinstance(devices, dict)
@@ -174,7 +233,7 @@ def validate(document: dict) -> dict:
         variants = bank.get("variants", {})
         if (
             not isinstance(variants, dict)
-            or set(variants) - set(ROOMS)
+            or set(variants) - profile_ids
             or any(not isinstance(v, dict) or set(v) - settings.keys() for v in variants.values())
         ):
             raise ProfileError("Room variants may only override existing bank settings")

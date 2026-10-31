@@ -27,7 +27,7 @@ export_profiles:
         text:
 restore_standard:
   name: Restore standard
-  description: Restore saved values for the selected scope using the current day/night settings. Requires an available bridge; native standby restores remain queued on the TV.
+  description: Restore saved values for the selected scope using the active named profile. Requires an available bridge; native standby restores remain queued on the TV.
   fields:
     entry_id:
       name: Integration entry ID
@@ -60,7 +60,7 @@ restore_standard:
             - {value: selection, label: Preset selection}
 save_standard:
   name: Save adjustments as standard
-  description: Ask the TV to promote tracked temporary adjustments to its saved standard.
+  description: Ask the TV to promote tracked temporary adjustments to the active profile’s saved standard.
   fields:
     entry_id:
       name: Integration entry ID
@@ -119,3 +119,25 @@ restore_backup:
       required: true
       selector:
         object:
+apply_profile:
+  name: Apply picture profile
+  description: Select a TV-owned named profile using its stable ID. Use automatic to follow the TV's bright/dark bindings or standard for base values. Requires bridge 0.17.0. Selection persists across power cycles; standby application is queued on the TV.
+  fields:
+    entry_id:
+      name: Integration entry ID
+      description: Optional when only one TV is configured.
+      selector:
+        text:
+    profile_id:
+      name: Profile ID
+      description: Copy the stable ID from Manage profiles in the editor. Renaming a profile keeps its ID.
+      required: true
+      example: p_a1b2c3d4
+      selector:
+        text:
+    clear_adjustments:
+      name: Clear temporary adjustments
+      description: Apply saved standards now. Turn off to preserve current temporary adjustments until the next power cycle.
+      default: true
+      selector:
+        boolean:
