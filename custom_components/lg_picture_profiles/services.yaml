@@ -39,6 +39,25 @@ restore_standard:
       selector:
         select:
           options: [all, active]
+    filters:
+      name: Profile filters
+      description: >-
+        Optional editor filters. Each value is a list, for example {port: [hdmi1, hdmi4], format: [hdr], family: [game]}.
+        Also supports preset, genre and allm ("on" or "off"). Linked brightness includes every linked profile.
+      selector:
+        object:
+    categories:
+      name: Settings categories
+      description: Optional categories to restore. Unavailable controls are excluded; the response lists exact restored targets. Requires bridge 0.16.0.
+      selector:
+        select:
+          multiple: true
+          options:
+            - {value: picture, label: Picture}
+            - {value: motion, label: Motion}
+            - {value: game, label: Gaming}
+            - {value: port, label: HDMI connection}
+            - {value: selection, label: Preset selection}
 save_standard:
   name: Save adjustments as standard
   description: Ask the TV to promote tracked temporary adjustments to its saved standard.

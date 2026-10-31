@@ -31,7 +31,9 @@ class ProfileBrightness(ProfileEntity, NumberEntity):
 
     @property
     def available(self):
-        return self.manager.available and bool(self.manager.snapshot)
+        role = "game_sdr" if self.key == "game_sdr" else "movie_sdr"
+        banks = (self.manager.snapshot.get("document") or {}).get("banks", [])
+        return self.manager.available and any(bank.get("brightness_role") == role for bank in banks)
 
     @property
     def native_value(self):

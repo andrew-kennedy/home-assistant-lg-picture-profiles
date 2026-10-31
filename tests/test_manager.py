@@ -14,6 +14,22 @@ from custom_components.lg_picture_profiles.model import ProfileError
 from .conftest import FakeTransport, MemoryStore, document
 
 
+async def test_grouped_restore_uses_tv_scope_model(manager):
+    await manager._accept_backup(backup())
+    manager.transport.manager_status["editor_api"] = 5
+    filters = {"port": ["hdmi1", "hdmi4"], "format": ["hdr"], "family": ["game"]}
+    await manager.async_restore(filters=filters, categories=["picture", "motion"])
+    assert manager.transport.calls[-1] == (
+        "restore_scope",
+        {"scope": "all", "revision": 1, "filters": filters, "categories": ["picture", "motion"]},
+    )
+    manager.transport.manager_status["editor_api"] = 4
+    with pytest.raises(HomeAssistantError, match="Update"):
+        await manager.async_restore(filters=filters)
+    await manager.async_restore()
+    assert manager.transport.calls[-1] == ("restore", {"scope": "all"})
+
+
 def backup(sequence=1, revision=1, instance="tv-process", owner="tv-owner", **fields):
     state = {
         "schema": 1,

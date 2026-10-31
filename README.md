@@ -1,6 +1,6 @@
 # LG Picture Profiles
 
-Home Assistant controls and complete backups for the **TV-owned** profile manager in [LG Picture Bridge](https://github.com/andrew-kennedy/lg-webos-picture-bridge). Requires bridge **0.15.0+** for the editor, rooted LG G6/webOS 11 and Home Assistant **2026.10+**. The TV is the single owner of standards and restoration; this integration performs no native picture-policy writes.
+Home Assistant controls and complete backups for the **TV-owned** profile manager in [LG Picture Bridge](https://github.com/andrew-kennedy/lg-webos-picture-bridge). Requires bridge **0.15.0+** for the editor (**0.16.0+** for brightness links and grouped restoration), rooted LG G6/webOS 11 and Home Assistant **2026.10+**. The TV is the single owner of standards and restoration; this integration performs no native picture-policy writes.
 
 ## Install or upgrade
 
@@ -43,6 +43,10 @@ In **Show separate controls by**, Preset family separates Gaming from Movies, wh
 
 The editor's categories describe the controls, while grouping factors describe which stored values you want to edit together. LG's ordinary Picture values, including Real Cinema and TruMotion de-judder/de-blur, belong to an input and preset. Only `truMotionMode` also uses the HDMI app scope. Game Optimizer values use input, range/ALLM and genre. Port options span all formats. Expanding stored-value details exposes those exact targets; a broad edit updates existing targets once, without creating inheritance rules.
 
+Use **SDR brightness links** to link or unlink individual gaming or movie profiles. Unlinking preserves the effective standards and both movie room values; independent profiles can be edited per input/preset/room. Relinking previews the shared brightness it will adopt. The integration’s shared sliders affect only linked profiles and become unavailable if no profile uses their group. Apple TV and Shield still share the same native HDMI 3 movie banks.
+
+Under **Motion**, **Include TruMotion adjustments** captures the TV’s existing de-judder/de-blur values. Save TruMotion **User Selection** to edit the 0–10 sliders, including for an inactive source. Game presets exclude interpolation.
+
 Only keys defined in the collection are managed. New genres require corresponding native-bank definitions. Unrelated accessibility, audio, panel calibration and energy settings are not added or learned. Unconfigured remote-selected presets can be tracked for restoration but cannot be promoted as supported standards.
 
 ## Backups and recovery
@@ -65,10 +69,25 @@ The backup is complete for **managed picture profiles**, not a firmware or whole
 - `import_profiles`: import a verified document or YAML into the TV; replaces the collection and restores its managed standards.
 - `export_backup`: return the complete received envelope (optionally a previous standard revision).
 - `restore_backup`: explicitly restore standards/preferences from a complete envelope.
-- `restore_standard`: reset `active` or `all` managed banks on the TV.
+- `restore_standard`: reset `active` or `all` managed banks, optionally narrowed using the editor’s profile filters and settings categories. Filtered restoration excludes unsupported controls and returns exact affected targets. Linked brightness includes all linked profiles. Requires bridge 0.16.0 for filters/categories.
 - `save_standard`: explicitly promote tracked `active` or `all` adjustments.
 - `reconcile`: ask the TV to retry pending recovery/environment work.
 - `preview`: the complete cached profile state, including standards, brightness preferences, temporary adjustments, recovery scopes and bridge status. While offline it returns the saved snapshot with an explicit offline status. It does not audit all native settings, change profiles or add a stored copy. Version 0.4.2 restores this full view after 0.4.1 briefly summarized it.
+
+For example, restore the saved HDR gaming picture values on the PC and PS5, keeping HDMI connection options outside the selected categories:
+
+```yaml
+action: lg_picture_profiles.restore_standard
+data:
+  scope: all
+  filters:
+    port: [hdmi1, hdmi4]
+    format: [hdr]
+    family: [game]
+  categories: [picture]
+```
+
+Filters also accept `preset`, `genre` and `allm` (list values `"on"`/`"off"`). Categories are `picture`, `motion`, `game`, `port` and `selection`; omit categories to include all. The same scope rules apply in the editor and on the TV. Existing scripts using only `scope` keep their behavior. HA scripts can give reusable groups meaningful names without duplicating standards or adding a second profile engine.
 
 Use the integration's **Configure** screen to rename it or change the sun/TV entities. The MQTT base is fixed per entry; add another entry for another TV. Never edit live `.storage` manually. Retired recipe/environment automations must remain removed so they do not compete with TV ownership; the bridge rejects legacy profile writes after initialization. HDMI icon commands and source/CEC/power automations continue independently.
 

@@ -143,7 +143,11 @@ def _register_services(hass: HomeAssistant) -> None:
             if call.service == "restore_backup":
                 return await manager.async_restore_backup(call.data["backup"])
             if call.service == "restore_standard":
-                return await manager.async_restore(call.data.get("scope", "all"))
+                return await manager.async_restore(
+                    call.data.get("scope", "all"),
+                    call.data.get("filters"),
+                    call.data.get("categories"),
+                )
             if call.service == "save_standard":
                 return await manager.async_save_standard(call.data.get("scope", "active"))
             if call.service == "preview":
@@ -175,6 +179,16 @@ def _register_services(hass: HomeAssistant) -> None:
             fields[
                 vol.Optional("scope", default="all" if name == "restore_standard" else "active")
             ] = vol.In(["active", "all"])
+        if name == "restore_standard":
+            fields[vol.Optional("filters")] = vol.Schema(
+                {
+                    vol.Optional(key): vol.All([str], vol.Length(min=1))
+                    for key in ("port", "format", "family", "preset", "genre", "allm")
+                }
+            )
+            fields[vol.Optional("categories")] = vol.All(
+                [vol.In(["picture", "motion", "game", "port", "selection"])], vol.Length(min=1)
+            )
         hass.services.async_register(
             DOMAIN,
             name,

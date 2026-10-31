@@ -341,7 +341,16 @@ class ProfileManager:
         decode(envelope)
         return await self.async_rpc("restore_backup", backup=envelope, revision=self.revision)
 
-    async def async_restore(self, scope="all"):
+    async def async_restore(self, scope="all", filters=None, categories=None):
+        if filters is not None or categories is not None:
+            if self.transport.manager_status.get("editor_api", 0) < 5:
+                raise HomeAssistantError("Update LG Picture Bridge to use grouped restoration")
+            fields = {"scope": scope, "revision": self.revision}
+            if filters is not None:
+                fields["filters"] = filters
+            if categories is not None:
+                fields["categories"] = categories
+            return await self.async_rpc("restore_scope", **fields)
         return await self.async_rpc("restore", scope=scope)
 
     async def async_save_standard(self, scope="active"):
