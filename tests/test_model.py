@@ -87,3 +87,19 @@ def test_motion_controls_use_their_native_database_scope():
     motion["settings"]["truMotionJudder"] = 0
     with pytest.raises(ProfileError):
         validate(doc)
+
+
+def test_tv_apps_input_stores_picture_and_preset_banks_only():
+    """LG's "default" input carries the Home Screen and webOS apps (TV apps)."""
+    from custom_components.lg_picture_profiles.model import allowed_keys
+
+    picture = {"category": "picture", "dimension": {"input": "default", "pictureMode": "filmMaker"}}
+    assert "backlight" in allowed_keys(picture) and "motionPro" in allowed_keys(picture)
+    mapping = {"category": "picture", "dimension": {"input": "default", "dynamicRange": "sdr"}}
+    assert allowed_keys(mapping) == {"pictureMode"}
+    with pytest.raises(ProfileError, match="no HDMI app binding"):
+        allowed_keys({**picture, "app_id": "com.webos.app.default"})
+    with pytest.raises(ProfileError):
+        allowed_keys({"category": "other", "dimension": {"gameInput": "default"}})
+    with pytest.raises(ProfileError):
+        allowed_keys({"category": "picture", "dimension": {"input": "browser", "pictureMode": "filmMaker"}})

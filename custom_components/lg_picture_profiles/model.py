@@ -80,11 +80,14 @@ def allowed_keys(target: dict) -> set[str]:
     d = target.get("dimension")
     if not isinstance(d, dict) or not all(isinstance(v, str) for v in d.values()):
         raise ProfileError("Explicit string dimensions are required")
+    # "default" is LG's input for the Home Screen and webOS apps (TV apps).
     if target.get("category") == "picture" and re.fullmatch(
-        r"hdmi[1-4](?:_pc)?", d.get("input", "")
+        r"hdmi[1-4](?:_pc)?|default", d.get("input", "")
     ):
         if set(d) == {"input", "pictureMode"} and d["pictureMode"] in PRESETS:
             if "app_id" in target:
+                if d["input"] == "default":
+                    raise ProfileError("TV apps have no HDMI app binding")
                 if target["app_id"] != "com.webos.app." + d["input"].removesuffix("_pc"):
                     raise ProfileError("Wrong HDMI app binding")
                 return {"truMotionMode"}
