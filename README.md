@@ -1,5 +1,7 @@
 # LG Picture Profiles
 
+Version **0.17.0** shares bridge **0.26.0**. The panel works in Game Optimizer's Standard genre only: LG's game genres are six saved copies of the same Game Optimizer values, which profiles already choose per device, so the panel ignores the other genres and **Game genre** and the genre chips are gone. It also drops 0.16.0's hiding of model-disabled settings, which bridge 0.26.0 makes unnecessary.
+
 Version **0.16.0** shares bridge **0.25.0**. The panel no longer lists settings the TV model never uses. On the G6 that is Dolby Precision Detail, which LG switches off for the whole model, so it showed n/a everywhere. With older bridges the panel hides it once the first settings are read. Stored values are kept.
 
 Version **0.15.0** shares bridge **0.24.0**. The panel locks presets an input never selects: their faded values can't be selected and broad edits leave them out. It also explains that Game presets use Game Optimizer's own Contrast, Black level, Color depth and Sharpness for each genre, edited in those settings' Game rows. The reviewer notes gain a Dolby Vision section and say which settings RTINGS leaves at their defaults.
