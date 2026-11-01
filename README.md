@@ -1,5 +1,7 @@
 # LG Picture Profiles
 
+Version **0.12.7** shares bridge **0.21.8**: OLED Motion edits the G6's real on/off control, the grid fills and saves much faster, and rows or inputs where LG uses a setting nowhere (TruMotion in Game presets, for example) take no grid space until you ask for them. Install bridge 0.21.8 for OLED Motion and the faster reads. No entity, configuration, storage or automation migration.
+
 Version **0.12.6** shares bridge **0.21.7**’s redesigned editor. Pick a setting, then choose where one value applies on a **target grid**: inputs are columns and presets are rows grouped SDR / HDR / Dolby Vision. A column, row, format header or **All inputs** edits, for example, every Dolby Vision preset on HDMI 3 and HDMI 4 in one reviewed save. Cells show stored values, overrides and where LG doesn't use the setting. The **Editing** tabs (Base or a profile) are colour-coded and kept separate from **On TV now**, which shows the input, preset and profile on screen, or **Last watched** when no HDMI picture is showing. No entity, configuration, storage or automation migration.
 
 Version **0.11.1** shares bridge **0.20.1**’s simplified editor: **Edit Base** is the default, **Edit profile** edits named overrides, and each override has an **Edit Base** shortcut. The review explicitly identifies the save destination and which profiles follow a Base change. Selection and grouping move behind an **Applies to** summary, with viewing-profile activation and automatic bindings in their own section.

@@ -27,7 +27,7 @@ PICTURE_KEYS = set(
     (
         "backlight contrast brightness color tint sharpness colorTemperature colorGamut gamma gammaLevel "
         "peakBrightness hdrDynamicToneMapping expressionEnhancer dynamicContrast dynamicColor superResolution "
-        "noiseReduction mpegNoiseReduction smoothGradation realCinema truMotionJudder truMotionBlur motionEyeCare motionProOLED "
+        "noiseReduction mpegNoiseReduction smoothGradation realCinema truMotionJudder truMotionBlur motionEyeCare motionProOLED motionPro "
         "aiHdrRemastering ambientLightCompensation filmmakerAmbientLight dolbyPrecisionDetail nearBlackDetail blackLevel"
     ).split()
 )
