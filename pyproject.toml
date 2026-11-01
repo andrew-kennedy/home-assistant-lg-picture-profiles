@@ -1,6 +1,6 @@
 [project]
 name = "home-assistant-lg-picture-profiles"
-version = "0.12.5"
+version = "0.12.6"
 description = "Saved picture standards and temporary overrides for LG Picture Bridge"
 requires-python = ">=3.14"
 
