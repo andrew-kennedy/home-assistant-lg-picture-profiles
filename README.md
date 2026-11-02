@@ -1,5 +1,7 @@
 # LG Picture Profiles
 
+Version **0.19.0** shares bridge **0.28.0**. The panel no longer offers the Eco and Photo picture presets: unlike the others, they have no picture tuning of their own. Personalized stays for its Picture Wizard. Saved values naming Eco or Photo stay valid.
+
 Version **0.18.0** shares bridge **0.27.0**. The panel adds Game Optimizer's **AI Sound Pro**: one On/Off value per HDMI port, listed with the Game Optimizer settings and used only in Game presets. Saved profiles and backups accept its bank (`sound`, `audioInput: hdmiN_game`).
 
 Version **0.17.0** shares bridge **0.26.0**. The panel works in Game Optimizer's Standard genre only: LG's game genres are six saved copies of the same Game Optimizer values, which profiles already choose per device, so the panel ignores the other genres and **Game genre** and the genre chips are gone. It also drops 0.16.0's hiding of model-disabled settings, which bridge 0.26.0 makes unnecessary.
