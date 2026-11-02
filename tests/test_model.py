@@ -103,3 +103,22 @@ def test_tv_apps_input_stores_picture_and_preset_banks_only():
         allowed_keys({"category": "other", "dimension": {"gameInput": "default"}})
     with pytest.raises(ProfileError):
         allowed_keys({"category": "picture", "dimension": {"input": "browser", "pictureMode": "filmMaker"}})
+
+
+def test_game_optimizer_sound_uses_the_ports_game_audio_input():
+    """AI Sound Pro (aigamesound) is stored per port's Game Optimizer audio input."""
+    from custom_components.lg_picture_profiles.model import allowed_keys
+
+    target = {"category": "sound", "dimension": {"audioInput": "hdmi3_game"}}
+    assert allowed_keys(target) == {"aigamesound"}
+    for bad in (
+        {"category": "sound", "dimension": {"audioInput": "hdmi3"}},
+        {"category": "sound", "dimension": {"audioInput": "hdmi3_game", "soundOutput": "external_arc"}},
+        {**target, "app_id": "com.webos.app.hdmi3"},
+    ):
+        with pytest.raises(ProfileError):
+            allowed_keys(bad)
+    bank = {"target": target}
+    assert is_active(bank, {"input": "hdmi3", "mode": "hdrGame"})
+    assert not is_active(bank, {"input": "hdmi3", "mode": "filmMaker"})
+    assert not is_active(bank, {"input": "hdmi4", "mode": "game"})

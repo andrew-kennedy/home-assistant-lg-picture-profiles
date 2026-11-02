@@ -40,6 +40,9 @@ GAME_KEYS = {
     "whiteStabilizer",
     "lowLevelAdjustment",
 }
+# Game Optimizer's AI Sound Pro (LG's aigamesound), per port's Game Optimizer
+# audio input (hdmiN_game).
+SOUND_KEYS = {"aigamesound"}
 PORT_KEYS = {
     "gameGenre",
     "inputOptimization",
@@ -98,6 +101,13 @@ def allowed_keys(target: dict) -> set[str]:
             and "app_id" not in target
         ):
             return {"pictureMode"}
+    if (
+        target.get("category") == "sound"
+        and set(d) == {"audioInput"}
+        and re.fullmatch(r"hdmi[1-4]_game", d["audioInput"])
+        and "app_id" not in target
+    ):
+        return SOUND_KEYS
     if (
         target.get("category") == "other"
         and re.fullmatch(r"hdmi[1-4]", d.get("gameInput", ""))
@@ -299,6 +309,12 @@ def is_active(bank: dict, context: dict) -> bool:
     if "input" in d and d["input"] != context.get("input"):
         return False
     if "gameInput" in d and d["gameInput"] != str(context.get("input", "")).removesuffix("_pc"):
+        return False
+    # The Game Optimizer audio input is used only while its port is in a Game preset.
+    if "audioInput" in d and (
+        d["audioInput"] != str(context.get("input", "")).removesuffix("_pc") + "_game"
+        or not str(context.get("mode", "")).lower().endswith("game")
+    ):
         return False
     if "pictureMode" in d and d["pictureMode"] != context.get("mode"):
         return False
