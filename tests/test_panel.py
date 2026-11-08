@@ -1,13 +1,15 @@
 import asyncio
 import hashlib
+import inspect
 import json
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from homeassistant.exceptions import Unauthorized
 
+from custom_components.lg_picture_profiles import panel as panel_module
 from custom_components.lg_picture_profiles.panel import editor_command
 
 from .test_manager import backup
@@ -61,6 +63,27 @@ def test_vendored_editor_has_recorded_digest():
         assert hashlib.sha256((root / name).read_bytes()).hexdigest() == source["sha256"]
     panel = (root / "panel.js").read_text()
     assert panel.index("import './profile-view.js") < panel.index("import './profile-editor.js")
+
+
+async def test_panel_handles_safe_area_itself(monkeypatch):
+    # Home Assistant would otherwise pad the panel by the device safe areas around a
+    # panel that is already one screen tall, so the app page scrolls (pull to refresh)
+    # and the review row falls below the screen.
+    real = panel_module.panel_custom.async_register_panel
+    assert "handle_safe_area" in inspect.signature(real).parameters
+    register = AsyncMock()
+    monkeypatch.setattr(panel_module.panel_custom, "async_register_panel", register)
+    hass = SimpleNamespace(data={panel_module.REGISTERED: True})
+    entry = SimpleNamespace(entry_id="ABC", title="LG Picture Profiles")
+    await panel_module.async_register(hass, entry)
+    options = register.call_args.kwargs
+    assert options["handle_safe_area"] is True
+    assert options["embed_iframe"] is False
+    root = Path(__file__).parents[1] / "custom_components/lg_picture_profiles/frontend"
+    style = (root / "panel.js").read_text()
+    assert "box-sizing:border-box;height:100vh;height:100dvh;" in style
+    for inset in ("--safe-area-inset-top", "--safe-area-inset-bottom", "--safe-area-inset-left", "--safe-area-inset-right"):
+        assert "var(" + inset + ",0px)" in style
 
 
 async def test_editor_forwards_atomic_batch_and_exact_selection(manager):

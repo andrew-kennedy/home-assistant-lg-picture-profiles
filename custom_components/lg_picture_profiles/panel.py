@@ -27,8 +27,10 @@ async def async_register(hass, entry):
         webcomponent_name="lg-picture-profiles-panel",
         sidebar_title=entry.title,
         sidebar_icon="mdi:television-shimmer",
-        module_url=ASSET_ROOT + "/panel.js?v=0.19.0",
+        module_url=ASSET_ROOT + "/panel.js?v=0.20.0",
         embed_iframe=False,
+        # panel.js pads the safe-area insets itself and is exactly one screen tall.
+        handle_safe_area=True,
         require_admin=True,
         config={"entry_id": entry.entry_id, "title": entry.title},
     )

@@ -1,5 +1,7 @@
 # LG Picture Profiles
 
+Version **0.20.0** shares bridge **0.28.1** and fixes scrolling in the Home Assistant mobile app. The panel is now exactly one screen tall: it pads the device safe areas itself (it registers with `handle_safe_area`), so Home Assistant's page no longer scrolls behind it or pulls to refresh, and the review row stays on screen. On a phone the editor scrolls as one page with the review row pinned below it, a setting opens at its top, and Back returns to the same place in the list.
+
 Version **0.19.0** shares bridge **0.28.0**. The panel no longer offers the Eco and Photo picture presets: unlike the others, they have no picture tuning of their own. Personalized stays for its Picture Wizard. Saved values naming Eco or Photo stay valid.
 
 Version **0.18.0** shares bridge **0.27.0**. The panel adds Game Optimizer's **AI Sound Pro**: one On/Off value per HDMI port, listed with the Game Optimizer settings and used only in Game presets. Saved profiles and backups accept its bank (`sound`, `audioInput: hdmiN_game`).
