@@ -375,6 +375,17 @@ class ProfileManager:
             "apply_profile", profile_id=profile_id, clear_adjustments=clear_adjustments
         )
 
+    async def async_apply_addon(self, group, profile_id, clear_adjustments=True):
+        """Choose one add-on (or none) for a group; it layers over the main profile."""
+        if self.transport.manager_status.get("editor_api", 0) < 10:
+            raise HomeAssistantError("Update LG Picture Bridge to 0.30.0 for add-on profiles")
+        return await self.async_rpc(
+            "apply_addon",
+            group=group,
+            profile_id=None if profile_id in (None, "", "none") else profile_id,
+            clear_adjustments=clear_adjustments,
+        )
+
     async def async_set_brightness(self, role, value):
         if role not in BRIGHTNESS_ROLES or not float(value).is_integer() or not 0 <= value <= 100:
             raise HomeAssistantError("SDR brightness must be an integer from 0 to 100")

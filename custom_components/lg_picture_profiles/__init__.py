@@ -155,6 +155,10 @@ def _register_services(hass: HomeAssistant) -> None:
                 return await manager.async_apply_profile(
                     call.data["profile_id"], call.data["clear_adjustments"]
                 )
+            if call.service == "apply_addon":
+                return await manager.async_apply_addon(
+                    call.data["group"], call.data["profile_id"], call.data["clear_adjustments"]
+                )
             if call.service == "preview":
                 return await manager.async_preview()
             return await manager.async_reconcile()
@@ -167,6 +171,7 @@ def _register_services(hass: HomeAssistant) -> None:
         "restore_standard",
         "save_standard",
         "apply_profile",
+        "apply_addon",
         "reconcile",
         "preview",
         "export_backup",
@@ -176,6 +181,10 @@ def _register_services(hass: HomeAssistant) -> None:
         if name == "import_profiles":
             fields.update({vol.Optional("document"): dict, vol.Optional("yaml"): str})
         if name == "apply_profile":
+            fields[vol.Required("profile_id")] = str
+            fields[vol.Optional("clear_adjustments", default=True)] = bool
+        if name == "apply_addon":
+            fields[vol.Required("group")] = str
             fields[vol.Required("profile_id")] = str
             fields[vol.Optional("clear_adjustments", default=True)] = bool
         if name == "restore_backup":

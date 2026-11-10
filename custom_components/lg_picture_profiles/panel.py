@@ -91,6 +91,7 @@ async def editor_command(hass, connection, message):
             "reset_profile",
             "set_automatic",
             "apply_profile",
+            "apply_addon",
         ):
             result = await manager.async_rpc(action, **command)
         else:

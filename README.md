@@ -1,5 +1,7 @@
 # LG Picture Profiles
 
+Version **0.21.0** shares bridge **0.30.0** and adds **add-on profiles**: a fix for one source, such as a Switch 2 HDR tone-mapping and shadow fix, that you turn on without leaving Automatic. Each add-on group gets a select entity (for example `select.<tv>_switch_2_hdr_add_on`) listing **Off (no add-on)** and that group's add-ons; the `lg_picture_profiles.apply_addon` action does the same by stable ID. An add-on layers over the main profile and changes only the settings it overrides, and the choice persists on the TV. Add-ons don't appear in the **Picture profile** select. Create them in the panel's **Manage profiles**.
+
 Version **0.20.0** shares bridge **0.28.1** and fixes scrolling in the Home Assistant mobile app. The panel is now exactly one screen tall: it pads the device safe areas itself (it registers with `handle_safe_area`), so Home Assistant's page no longer scrolls behind it or pulls to refresh, and the review row stays on screen. On a phone the editor scrolls as one page with the review row pinned below it, a setting opens at its top, and Back returns to the same place in the list.
 
 Version **0.19.0** shares bridge **0.28.0**. The panel no longer offers the Eco and Photo picture presets: unlike the others, they have no picture tuning of their own. Personalized stays for its Picture Wizard. Saved values naming Eco or Photo stay valid.
@@ -119,6 +121,7 @@ The backup is complete for **managed picture profiles**, not a firmware or whole
 - `restore_standard`: reset `active` or `all` managed banks, optionally narrowed using the editor’s profile filters and settings categories. Filtered restoration excludes unsupported controls and returns exact affected targets. Linked brightness includes all linked profiles. Requires bridge 0.16.0 for filters/categories.
 - `save_standard`: explicitly promote tracked `active` or `all` adjustments into the active profile.
 - `apply_profile`: select a named profile by stable ID, `standard` or `automatic`; clears temporary adjustments by default.
+- `apply_addon`: select an add-on profile for its `group` by stable ID, or `none`; clears temporary adjustments in the settings the old and new add-on own by default. Requires bridge 0.30.0.
 - `reconcile`: ask the TV to retry pending recovery/environment work.
 - `preview`: the complete cached profile state, including standards, brightness preferences, temporary adjustments, recovery scopes and bridge status. While offline it returns the saved snapshot with an explicit offline status. It does not audit all native settings, change profiles or add a stored copy. Version 0.4.2 restores this full view after 0.4.1 briefly summarized it.
 

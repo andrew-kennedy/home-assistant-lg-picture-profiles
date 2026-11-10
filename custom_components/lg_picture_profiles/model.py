@@ -142,9 +142,9 @@ def validate_catalog(document: dict) -> set[str]:
     profiles = document.get("profiles")
     if not isinstance(profiles, list) or len(profiles) > 32:
         raise ProfileError("Expected up to 32 named profiles")
-    ids, names = set(), {"automatic", "base standard"}
+    ids, names, addons = set(), {"automatic", "base standard"}, set()
     for profile in profiles:
-        if not isinstance(profile, dict) or set(profile) - {"id", "name", "brightness"}:
+        if not isinstance(profile, dict) or set(profile) - {"id", "name", "brightness", "group"}:
             raise ProfileError("Invalid named profile")
         pid, name = profile.get("id"), profile.get("name")
         if (
@@ -163,16 +163,41 @@ def validate_catalog(document: dict) -> set[str]:
         ):
             raise ProfileError("Choose a unique profile name")
         brightness(profile.get("brightness", {}))
+        if "group" in profile:
+            # Add-on profiles layer over the main profile, one per group.
+            group = profile["group"]
+            if (
+                not isinstance(group, str)
+                or not 1 <= len(group) <= 40
+                or group != group.strip()
+                or re.search(r"[\x00-\x1f\x7f]", group)
+            ):
+                raise ProfileError("Choose an add-on group name (1–40 characters)")
+            if profile.get("brightness"):
+                raise ProfileError("Add-on profiles cannot change linked SDR brightness")
+            addons.add(pid)
         ids.add(pid)
         names.add(name.lower())
     automatic = document.get("automatic")
     if (
         not isinstance(automatic, dict)
         or set(automatic) != {"bright", "dark"}
-        or any(not isinstance(v, str) or v not in ids | {"standard"} for v in automatic.values())
+        or any(
+            not isinstance(v, str) or v not in ids | {"standard"} or v in addons
+            for v in automatic.values()
+        )
     ):
         raise ProfileError("Invalid automatic profile bindings")
     return ids
+
+
+def addon_groups(document: dict) -> dict[str, list[dict]]:
+    """Add-on profiles by group, in the order the TV lists them."""
+    groups: dict[str, list[dict]] = {}
+    for profile in (document or {}).get("profiles", []) if (document or {}).get("schema") == 2 else []:
+        if profile.get("group"):
+            groups.setdefault(profile["group"], []).append(profile)
+    return groups
 
 
 def validate(document: dict) -> dict:

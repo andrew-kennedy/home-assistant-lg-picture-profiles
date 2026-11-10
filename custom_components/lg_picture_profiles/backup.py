@@ -53,6 +53,11 @@ def decode(envelope: dict) -> dict:
             or state.get("active_profile") not in ids
         ):
             raise ProfileError("Invalid selected profile")
+        addons = state.get("addons", {})
+        if not isinstance(addons, dict) or any(
+            not isinstance(v, str) for v in addons.values()
+        ):
+            raise ProfileError("Invalid add-on selection")
     prefs = state.get("preferences")
     if (
         not isinstance(prefs, dict)

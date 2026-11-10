@@ -141,3 +141,31 @@ apply_profile:
       default: true
       selector:
         boolean:
+apply_addon:
+  name: Choose an add-on profile
+  description: Select an add-on profile for its group (for example Switch 2 HDR), or none. An add-on layers over Automatic or a manual profile and only changes the settings it overrides. The choice persists across power cycles. Requires bridge 0.30.0.
+  fields:
+    entry_id:
+      name: Integration entry ID
+      description: Optional when only one TV is configured.
+      selector:
+        text:
+    group:
+      name: Add-on group
+      required: true
+      example: Switch 2 HDR
+      selector:
+        text:
+    profile_id:
+      name: Add-on profile ID
+      description: The add-on's stable ID from Manage profiles, or none to turn the group off.
+      required: true
+      example: none
+      selector:
+        text:
+    clear_adjustments:
+      name: Clear temporary adjustments
+      description: Discard temporary adjustments in the settings the old and new add-on own.
+      default: true
+      selector:
+        boolean:
